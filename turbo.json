@@ -1,0 +1,33 @@
+{
+  "$schema": "https://v2-8-13.turborepo.dev/schema.json",
+  "globalEnv": ["CI"],
+  "globalPassThroughEnv": ["CI"],
+  "tasks": {
+    "typecheck": {},
+    "build": {
+      "dependsOn": [],
+      "outputs": ["dist/**"]
+    },
+    "opencode#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "passThroughEnv": ["*"]
+    },
+    "@auditcode/core#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@auditcode/app#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@auditcode/ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "@auditcode/session-ui#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
+  }
+}

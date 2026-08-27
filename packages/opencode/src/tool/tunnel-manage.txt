@@ -1,0 +1,20 @@
+Manage network tunnels and pivoting sessions — the RELIABLE way to turn a foothold into a persistent pivot instead of hand-rolling finicky shells. Plan a COMPLETE runnable tunnel recipe (attacker-IP filled in, binary-staging + verify included), register an established tunnel as a live_session, list active tunnels, mark one dead, or record a liveness probe. Does NOT execute — it emits copy-paste-ready commands for you to run.
+
+Parameters:
+- action: "plan" | "register" | "list" | "remove" | "healthcheck"
+- host_ip: the FOOTHOLD host the tunnel runs through (required for plan/register)
+- attacker_ip: YOUR IP the target connects back to for reverse tunnels (chisel/ligolo). Omit to fall back to $OPENCODE_ATTACKER_IP; if still unknown you get a <ATTACKER_IP> placeholder + a warning to fill it.
+- binary: pivot binary to stage for chisel/ligolo (default "chisel")
+- tunnel_type: "ssh_local"|"ssh_dynamic"|"socks"|"port_forward"|"chisel"|"ligolo"
+- local_port: local port to bind (default 9050)
+- remote_target / remote_port: internal target for port-forward / route
+- username / credential_id: SSH auth (pulled from engagement creds if omitted)
+- pid: PID of the established tunnel/shell (register/healthcheck liveness)
+- alive: healthcheck — set the session alive (true) or dead (false) after probing
+- session_id: required for remove/healthcheck
+
+For "plan": generates the exact commands for the chosen tunnel_type — SSH (-D/-L), chisel reverse SOCKS, or ligolo-ng. For chisel/ligolo it ALSO emits (a) the attacker-side server/proxy command with your IP filled in, (b) a base64-chunked binary-staging recipe to land the pivot binary on an egress-restricted / curl-less foothold whose RCE truncates output, and (c) a proxychains verify probe. Never push a binary/gadget through a truncating RCE without staging — that is the pivot-death failure mode.
+For "register": records an established tunnel as a live_session (with pid + last_seen) so the whole fleet routes internal work through it via `state_query sessions`.
+For "list": shows all active tunnels/sessions.
+For "remove": drops a dead/closed session.
+For "healthcheck": records a liveness probe (updates last_seen, optionally alive/pid) and re-emits the verify command — run it periodically so a dead tunnel is caught instead of silently swallowing internal traffic.

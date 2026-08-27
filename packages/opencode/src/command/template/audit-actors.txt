@@ -1,0 +1,1 @@
+Call `state_query(query_type: "actors")`. Present the protocol Access Control Matrix, showing roles, privileged functions, and timelock delays.

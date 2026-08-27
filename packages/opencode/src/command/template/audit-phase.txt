@@ -1,0 +1,1 @@
+Check or update the current audit phase. If an argument is provided (e.g. `static_analysis`, `deep_audit`, `poc_verification`, `reporting`), call `phase_control(action: "set", phase: "$ARGUMENTS")`. Otherwise call `phase_control(action: "status")`.

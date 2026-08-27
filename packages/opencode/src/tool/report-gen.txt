@@ -1,0 +1,1 @@
+Generates institutional-grade Web3 Smart Contract Security Audit Reports in Markdown and JSON formats, with executive summary, risk rating tables, in-scope contracts, roles matrix, protocol invariants, and detailed categorized findings with diff fixes and PoC test code.

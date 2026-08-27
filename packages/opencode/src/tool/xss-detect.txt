@@ -1,0 +1,7 @@
+Analyze HTTP response output for reflected or stored XSS indicators. This is a passive analysis tool — feed it the response body/headers captured from curl, burp, or browser devtools after injecting a test payload.
+
+Checks: payload reflection in response body (unescaped), Content-Type header, X-XSS-Protection header, Content-Security-Policy header, WAF/filter signatures.
+
+Classification: "reflected" (payload found unescaped in response), "potential_stored" (input accepted, no immediate reflection — check other pages), "blocked" (WAF or filter detected), "not_vulnerable" (payload escaped or not reflected).
+
+By default, auto-updates engagement state when XSS is detected. Extracts host IP or domain from the URL for state binding.

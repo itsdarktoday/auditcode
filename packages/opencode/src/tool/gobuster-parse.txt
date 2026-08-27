@@ -1,0 +1,1 @@
+Parse gobuster or feroxbuster directory brute-force output into structured findings. Auto-detects format. By default, automatically flags security-sensitive paths (exposed .git/.env, admin panels, backup files) as vulnerabilities in the engagement state. Accepts raw output text or a file path.

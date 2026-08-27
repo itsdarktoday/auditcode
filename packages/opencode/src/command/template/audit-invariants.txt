@@ -1,0 +1,1 @@
+Call `state_query(query_type: "invariants")`. List all defined protocol accounting and solvency invariants, target contracts, verification status, and fuzz properties.

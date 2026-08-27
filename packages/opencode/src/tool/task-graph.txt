@@ -1,0 +1,27 @@
+Manage the engagement task graph — a DAG of pentest tasks with dependencies, priorities, and agent assignments.
+
+`data` MUST be a JSON object (not a string). Each action reads only the fields it needs.
+
+Actions:
+- plan: Bulk-add tasks. data: { tasks: [{ id, description, assignedAgent?, priority?, target?, technique?, phase?, dependsOn? }] }
+    priority is one of: "critical" | "high" | "medium" | "low". dependsOn is an array of task ids.
+    Concrete example:
+      {
+        "tasks": [
+          { "id": "t1", "description": "Port scan 10.0.0.5", "assignedAgent": "scanner", "priority": "high", "target": "10.0.0.5" },
+          { "id": "t2", "description": "Enumerate web app", "assignedAgent": "webapp", "dependsOn": ["t1"] }
+        ]
+      }
+- dispatch: Mark a task as dispatched to an agent. data: { id, assignedAgent?, sessionId? }  — e.g. { "id": "t1", "assignedAgent": "scanner" }
+- complete: Mark task completed with optional result. data: { id, result? }  — e.g. { "id": "t1", "result": "3 open ports" }
+- fail: Mark task failed. data: { id, result? }
+- abandon: De-track a task (stop planning around it) but LET its subagent finish — a seemingly-redundant agent may still succeed and its result is still reported (use it or ignore it). Use when it merely LOOKS redundant. data: { id }
+- kill: De-track AND hard-stop the running subagent (kills the background job, frees its tokens; affects only that subagent). Use ONLY when sure it's stuck/looping/wrong — killing loses whatever it might still produce. data: { id }
+- list_ready: List tasks ready for dispatch (all deps completed). No data.
+- list_all: List all tasks with status summary. No data.
+- status: Quick status summary (counts per status). No data.
+
+Task states: planned → ready (auto when deps complete) → dispatched → running → completed/failed/abandoned
+Tasks with failed/abandoned dependencies become "blocked".
+
+Use this tool to plan and track parallel pentest work. The pentest coordinator plans tasks, dispatches them to subagents, and tracks completion.

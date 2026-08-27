@@ -1,0 +1,1 @@
+Check whether a target (IP, CIDR, domain, or URL) is within the engagement scope. Always verify scope before scanning or interacting with new targets. Returns in_scope, out_of_scope, or no_scope_defined.

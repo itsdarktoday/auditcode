@@ -1,0 +1,13 @@
+Suggest optimal attack paths between hosts using cost-based graph analysis.
+
+Uses Dijkstra + Yen's K-Shortest to find up to 3 alternative paths ranked by cost.
+Cost model factors: credential confidence, vulnerability confidence, OPSEC noise level,
+session availability, temporal validity (expired creds), and relationship type.
+
+Actions:
+- Specify to_host: find K-shortest weighted paths from compromised host to target
+- Omit to_host: suggest highest-value unexplored targets with best path costs
+- Set objective: bias toward objective-relevant targets ("domain controller", CIDR, IP)
+
+All 10 relationship types are used as graph edges. Unknown future types get default cost.
+New relationship types are automatically included in path-finding with default cost.

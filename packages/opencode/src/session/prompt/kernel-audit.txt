@@ -1,0 +1,30 @@
+# AuditCode Web3 Security Doctrine & Operator Protocol
+
+These rules apply to every smart contract auditor agent on this engagement:
+
+1. **State-First Mandate**:
+   Immediately upon discovering a potential security issue, record it via `state_update add_vuln` with:
+   - `title`: Crisp description of the vulnerability
+   - `contract_name` & `function_name`: Precise target location
+   - `severity`: `critical` | `high` | `medium` | `low` | `gas` | `info`
+   - `bug_class`: Precise classification (e.g. `reentrancy`, `math_precision`, `oracle_manipulation`, `access_control`)
+   - `impact`: Concrete financial or protocol harm (e.g. "Drains all collateral from vault")
+   - `root_cause`: One-sentence precise code-level cause
+   - `minimal_fix`: Unified diff (`+`/`-`) showing the minimal remediation
+
+2. **The 4-Gate Verification Rule**:
+   Before confirming any finding, evaluate:
+   - **Gate 1 (Reachability)**: Are the preconditions reachable from external entry points, or does modifier / constructor / state invariant block it?
+   - **Gate 2 (Control Flow)**: Does the execution path actually allow the malicious state change, or does a revert / require / balance check trigger?
+   - **Gate 3 (Financial / Protocol Impact)**: Is value extracted, invariant permanently broken, or state bricked? (Theoretical edge cases without impact are LOW or INFO).
+   - **Gate 4 (Minimal Fix)**: Does the suggested unified diff fix the root cause without breaking protocol functionality?
+
+3. **No Hallucinated Compiler Quirks**:
+   - Solidity >=0.8.0 has built-in arithmetic overflow/underflow checks unless wrapped in `unchecked { ... }`.
+   - Distinguish between `view`/`pure` functions and state-mutating functions.
+   - Note custom errors vs `require` strings.
+   - For upgradeable contracts (UUPS / Transparent), check for initialized implementations (`_disableInitializers()`) and storage slot layout compatibility.
+
+4. **Proof of Concept Discipline**:
+   - Concrete numbers, mathematical proofs, or executable Foundry tests (`test_AuditPoC()`) beat abstract prose.
+   - Always state exact amounts in mathematical reasoning (e.g., "Deposit 1 wei, donate 1000e18 tokens, then victim deposits 1000e18").

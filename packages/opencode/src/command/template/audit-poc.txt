@@ -1,0 +1,1 @@
+Call `state_query(query_type: "pocs")`. Show all registered Foundry / Forge PoC test exploits, their execution status (Passed / Failed), and linked vulnerability IDs.

@@ -1,0 +1,1 @@
+Parse NetExec (formerly CrackMapExec) output into structured credential, access, and host data. Automatically adds discovered credentials, access entries, and hosts to the engagement state. Detects admin access via "(Pwn3d!)" markers and SMB signing status. Accepts raw output text or a file path.

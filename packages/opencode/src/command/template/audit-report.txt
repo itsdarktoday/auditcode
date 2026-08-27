@@ -1,0 +1,1 @@
+Generate the final audit report using `report_gen(format: "markdown", output_path: "$ARGUMENTS" || "audit-report.md")`.

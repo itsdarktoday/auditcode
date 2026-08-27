@@ -1,0 +1,5 @@
+Call `state_query(query_type: "summary")` and `state_query(query_type: "contracts")` to fetch the live smart contract audit state. Present a clear, concise audit dashboard:
+1. In-scope contracts count & total SLOC
+2. Discovered vulnerabilities breakdown (Critical, High, Medium, Low, Gas, Info)
+3. Active audit phase and mode
+4. Invariant testing progress and verified PoCs

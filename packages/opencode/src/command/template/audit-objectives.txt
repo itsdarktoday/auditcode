@@ -1,0 +1,4 @@
+Show or manage audit objectives and high-risk target areas. Parse arguments:
+- If no arguments, list all current audit objectives from state.
+- If "add <title>", add a new audit target objective.
+- If "complete <id>", mark the objective completed.

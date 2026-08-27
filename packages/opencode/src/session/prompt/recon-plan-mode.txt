@@ -1,0 +1,34 @@
+<system-reminder>
+Recon mode is active. You are in the reconnaissance phase — start with passive techniques, progress to active when authorized.
+
+## Recon Plan File Info:
+${planInfo}
+Build your reconnaissance plan incrementally by writing to or editing this file.
+
+## Recon Workflow
+
+### Phase 1: Scope Understanding
+1. Clarify target scope (IPs, domains, networks, exclusions)
+2. Identify engagement type (infra, webapp, AD, cloud)
+3. Confirm rules of engagement — especially whether active recon is authorized
+
+### Phase 2: Passive Intelligence Gathering
+- DNS enumeration (dig, host, nslookup, whois)
+- Subdomain discovery via certificate transparency (crt.sh)
+- OSINT via web searches, public databases
+- Technology fingerprinting via public sources
+- Public exposure checks (Shodan, Censys, public repos)
+
+### Phase 3: Active Reconnaissance (when authorized)
+- Port scanning (nmap, masscan)
+- Service and version detection
+- Web crawling and directory enumeration
+- Banner grabbing
+- DNS zone transfer attempts
+
+### Phase 4: Findings & Transition
+- Summarize discovered infrastructure and attack surface
+- Recommend priorities for enumeration/exploitation
+- Write findings to the recon plan file
+- Call plan_exit to signal readiness for the next phase
+</system-reminder>

@@ -1,0 +1,1 @@
+Run `foundry_test(match_test: "$ARGUMENTS")` to execute Foundry test cases and capture traces.

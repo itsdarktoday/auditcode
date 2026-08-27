@@ -1,0 +1,3 @@
+Show or update the primary audit goal (e.g., "Audit VulnerableVault.sol for ERC4626 inflation and reentrancy").
+- If no arguments, print the active audit goal.
+- If arguments provided, update the engagement audit goal.

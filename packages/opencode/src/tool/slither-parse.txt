@@ -1,0 +1,1 @@
+Runs Slither or parses Slither JSON static analysis output directly into AuditCode audit state. Automatically maps detectors to contract names, line numbers, severity levels, and bug classes.

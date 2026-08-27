@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+
+import childProcess from "node:child_process"
+import fs from "node:fs"
+import path from "node:path"
+import os from "node:os"
+import { fileURLToPath } from "node:url"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const forwardedSignals = ["SIGINT", "SIGTERM", "SIGHUP"]
+
+function run(target) {
+  const child = childProcess.spawn(target, process.argv.slice(2), {
+    stdio: "inherit",
+  })
+
+  child.on("error", (error) => {
+    console.error(error.message)
+    process.exit(1)
+  })
+
+  const forwarders = {}
+  for (const signal of forwardedSignals) {
+    forwarders[signal] = () => {
+      try {
+        child.kill(signal)
+      } catch {
+        // The child may have already exited.
+      }
+    }
+    process.on(signal, forwarders[signal])
+  }
+
+  child.on("exit", (code, signal) => {
+    for (const forwardedSignal of forwardedSignals) {
+      process.removeListener(forwardedSignal, forwarders[forwardedSignal])
+    }
+
+    if (signal) {
+      process.kill(process.pid, signal)
+      return
+    }
+
+    process.exit(code ?? 0)
+  })
+}
+
+function resolveBinary() {
+  const platform = os.platform()
+  const arch = os.arch()
+
+  const platformMap = {
+    darwin: "darwin",
+    linux: "linux",
+    win32: "windows",
+  }
+
+  const archMap = {
+    x64: "x64",
+    arm64: "arm64",
+  }
+
+  const targetPlatform = platformMap[platform]
+  const targetArch = archMap[arch]
+
+  if (!targetPlatform || !targetArch) {
+    return null
+  }
+
+  const distDir = path.join(__dirname, "..", "dist")
+  const targetName = `auditcode-${targetPlatform}-${targetArch}`
+  const binaryName = targetPlatform === "windows" ? "auditcode.exe" : "auditcode"
+  
+  const possiblePaths = [
+    path.join(distDir, targetName, "bin", binaryName),
+    path.join(distDir, targetName, "bin", "pentestcode"),
+    path.join(distDir, `auditcode-${targetPlatform}-${targetArch}-baseline`, "bin", binaryName),
+    path.join(distDir, `auditcode-${targetPlatform}-${targetArch}-baseline`, "bin", "pentestcode"),
+  ]
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) return p
+  }
+
+  return null
+}
+
+const binary = resolveBinary()
+if (binary) {
+  run(binary)
+} else {
+  // Fallback to bun running the source
+  const sourceIndex = path.join(__dirname, "..", "src", "index.ts")
+  const child = childProcess.spawn("bun", ["run", "--conditions=browser", sourceIndex, ...process.argv.slice(2)], {
+    stdio: "inherit",
+  })
+  child.on("exit", (code) => process.exit(code ?? 0))
+}
