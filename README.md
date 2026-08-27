@@ -250,5 +250,5 @@ MIT License &copy; 2026 **[itsdarktoday](https://github.com/itsdarktoday)** & **
 ---
 
 <p align="center">
-  Crafted with &hearts; for the Web3 security community by <a href="https://github.com/itsdarktoday">itsdarktoday</a> &amp; <a href="https://github.com/0xscarfac3">0xscarfac3</a> &bull; Hard fork of OpenCode
+  Crafted with &hearts; for the Web3 security community by <a href="https://github.com/itsdarktoday">itsdarktoday</a> &amp; <a href="https://github.com/0xscarfac3">0xscarfac3</a> &bull; Hard fork of OpenCode and Pentestcode
 </p>
