@@ -1,0 +1,8 @@
+Parse sqlmap output (JSON or text) and auto-update engagement state with SQL injection vulnerabilities. Accepts raw sqlmap output, JSON from --output-dir, or a file path.
+
+JSON format: expects sqlmap's target results JSON with injection data (place, parameter, dbms, technique).
+Text format: parses sqlmap console output for vulnerability markers like "Parameter 'X' is vulnerable", DBMS identification, and database/table enumeration results.
+
+By default, auto-updates engagement state: creates a vulnerability entry for each confirmed injection point with severity high/critical, technique details, and evidence. Deduplicates by (host, parameter, technique).
+
+Use auto_update=false to parse without modifying state.

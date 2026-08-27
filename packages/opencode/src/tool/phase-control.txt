@@ -1,0 +1,1 @@
+Manages smart contract audit phases (scope_recon, static_analysis, threat_modeling, deep_audit, poc_verification, reporting) with automated quality gates and transition validation.

@@ -1,0 +1,1 @@
+Runs Cyfrin Aderyn AST static analysis or parses Aderyn JSON report output directly into AuditCode audit state.

@@ -1,0 +1,6 @@
+Call `state_query(query_type: "contracts")` and display a clean Markdown table of all in-scope smart contracts, showing:
+- Contract Name
+- Source Path
+- SLOC
+- Proxy Pattern (UUPS, Transparent, Diamond, Beacon, None)
+- Compiler Version

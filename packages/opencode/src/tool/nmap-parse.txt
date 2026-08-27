@@ -1,0 +1,1 @@
+Parse nmap scan output (XML or greppable format) into structured host and service data. By default, automatically adds discovered hosts and services to the engagement state. Accepts raw output text or a file path.

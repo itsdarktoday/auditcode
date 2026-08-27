@@ -1,0 +1,27 @@
+Query the current engagement state. Returns information about hosts, vulnerabilities, credentials, scope, phase, and other engagement data. Use this to understand the current state before planning next actions.
+
+Supported query types:
+- summary: Overview with counts (hosts, vulns, creds, flags, phase, mode)
+- hosts: List all discovered hosts with their services
+- vulns: List all vulnerabilities across all hosts (filter by severity)
+- creds: List all credentials (username + type + source, value redacted)
+- scope: Show target scope and exclusions
+- phase: Show current pentest phase and mode
+- flags: List captured flags
+- tasks: Show pending/in-progress task tree nodes
+- host: Show details for a specific host (set filter to the IP address)
+- full: Return full compact engagement context
+- objectives: List engagement objectives with status and priority
+- domain: Show Active Directory domain info (domain name, DCs, admins, trusts, password policy)
+- engagements: List all saved engagements and which is currently loaded
+- changelog: Show recent state changes (filter = number of entries to show, default 50)
+- diff: Show changes since last prompt injection — what happened since the LLM last saw the state
+- relationships: Show entity relationships/edges (filter by rel_type, source_id, or target_id)
+- decisions: Show strategic decision log (filter = number of entries, default 20)
+- alerts: Show active (un-acknowledged, non-expired) alerts from all agents
+- sessions: Show live sessions — shells, tunnels, listeners, proxies currently alive
+- segments: Show discovered network segments, VLANs, pivot paths
+- wordlists: Show wordlists already used (filter: "host_ip" or "host_ip:port" or "host_ip:port:tool_type"). Prevents repeating wordlists on the same target:port:tool_type combination.
+- resolved_vectors: Show attack vectors already settled (filter by status "attempted"|"confirmed"|"resolved"|"blocked", or a target/vector substring). Check BEFORE opening a vector — do not re-test RESOLVED/CONFIRMED, honor BLOCKED preconditions.
+- ooda: Full situation-awareness context — changes, coverage gaps, alerts, sessions, segments, tasks, objectives
+- subagents: REAL running/finished subagent processes for this session, from the live job registry. Use this (NOT task_graph status) to check what is actually running — task_graph "dispatched" does not mean a subagent was launched.

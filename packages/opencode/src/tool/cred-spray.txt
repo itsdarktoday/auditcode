@@ -1,0 +1,26 @@
+Plan a credential spray operation. Given a credential ID (or username+password), generates a list of (host, service, command) combinations to test, based on the current engagement state. Does NOT execute — returns the plan for the agent to review and execute.
+
+Parameters:
+- action: "plan" to generate spray plan from engagement state, "suggest" to check if new creds should be sprayed
+- credential_id: ID of the credential to spray (from engagement state)
+- username: Alternative to credential_id — specify username directly
+- password: Alternative to credential_id — specify password/hash directly
+- service_filter: Optional — limit to specific service types (smb, winrm, rdp, ssh, mssql, mysql, postgresql, ftp, web)
+
+For "plan" action: Returns a list of commands to test the credential against all discovered hosts with matching services. The agent should review and execute them.
+
+For "suggest" action: After a new credential is found, call this to check how many untested combinations exist. Returns a count and recommendation.
+
+Service-to-command mapping:
+- SMB (445): netexec smb HOST -u USER -p PASS
+- WinRM (5985/5986): netexec winrm HOST -u USER -p PASS
+- RDP (3389): netexec rdp HOST -u USER -p PASS
+- SSH (22): netexec ssh HOST -u USER -p PASS (or sshpass -p PASS ssh USER@HOST)
+- MSSQL (1433): netexec mssql HOST -u USER -p PASS
+- MySQL (3306): mysql -h HOST -u USER -pPASS -e "SELECT 1"
+- PostgreSQL (5432): PGPASSWORD=PASS psql -h HOST -U USER -c "SELECT 1"
+- FTP (21): curl -u USER:PASS ftp://HOST/
+- HTTP/HTTPS (80/443/8080): curl -u USER:PASS http://HOST/ (basic auth check only)
+
+For NTLM hashes: uses -H flag instead of -p where supported (netexec, evil-winrm, impacket).
+For Kerberos tickets: uses -k --use-kcache where supported.

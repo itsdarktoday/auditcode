@@ -1,0 +1,1 @@
+Resolves 4-byte EVM function selectors (e.g. 0xa9059cbb) and 32-byte event topic hashes using public signature databases (OpenChain / 4byte directory).

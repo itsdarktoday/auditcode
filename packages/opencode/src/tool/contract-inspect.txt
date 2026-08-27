@@ -1,0 +1,1 @@
+Inspects a Solidity, Vyper, or Rust contract file, extracting contract name, inheritance tree, public/external functions, modifiers, custom errors, events, proxy patterns, and SLOC count, and registers them into AuditCode audit state.

@@ -1,0 +1,1 @@
+Executes Foundry test suites (`forge test`) with deep verbosity (-vvvv), parses execution traces, gas logs, and assertion failures, and automatically records PoC verification status in AuditCode state.

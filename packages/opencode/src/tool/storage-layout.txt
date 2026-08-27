@@ -1,0 +1,1 @@
+Inspects the EVM storage slot layout of a contract using `forge inspect <contract> storage-layout`, reporting slot assignments, packed variables, byte offsets, and checking for missing storage gaps (`__gap`).

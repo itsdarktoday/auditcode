@@ -1,0 +1,8 @@
+Parse nuclei JSON output and auto-update engagement state with discovered vulnerabilities. Run nuclei with -j (JSON lines) or -o file.json flags, then pass the output here.
+
+Input: raw nuclei JSON lines output or file path to a nuclei results file.
+Each line is a JSON object with template-id, info (name, severity, tags, reference), host, matched-at, ip, port, type, matcher-name.
+
+By default, auto-updates engagement state: creates a vulnerability entry for each finding with severity, evidence, and references. Deduplicates by (ip, template-id, port).
+
+Use auto_update=false to parse without modifying state.

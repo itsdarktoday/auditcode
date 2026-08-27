@@ -1,0 +1,1 @@
+Call `state_query(query_type: "vulns", filter: "$ARGUMENTS")`. Present a structured list of all smart contract findings grouped by severity (🔴 Critical, 🟠 High, 🟡 Medium, 🔵 Low, ⚪ Gas, ℹ️ Info), showing ID, Title, Contract, Bug Class, Status, and PoC verification status.

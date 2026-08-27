@@ -1,0 +1,1 @@
+Run `slither_parse(target_path: "$ARGUMENTS" || ".")` to execute Slither static analysis and ingest findings into audit state.

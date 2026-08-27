@@ -1,0 +1,5 @@
+Decode and analyze a JWT token for security weaknesses. No external dependencies — decodes base64url header and payload locally.
+
+Checks: algorithm "none" attack, weak HMAC secrets (tests common passwords), expired tokens, missing standard claims (exp, iat, iss, sub), short key indicators, algorithm confusion (HS256 where RS256 expected).
+
+Returns decoded header, decoded payload, weakness list with severity, and overall risk assessment. Optionally auto-updates engagement state with a vulnerability if host_ip is provided.

@@ -1,0 +1,1 @@
+Analyzes a smart contract for ERC20, ERC721, ERC1155, or ERC4626 standard compliance, detecting unsafe raw transfers (USDT non-reverting issue), missing virtual offsets in ERC4626 vaults (inflation attack), and missing return value checks.

@@ -1,0 +1,61 @@
+Update the engagement state. IMPORTANT: Call this IMMEDIATELY after discovering any host, service, vulnerability, credential, or access. Every finding that is not recorded here is LOST.
+
+For real-time discoveries during active work: call once per finding, in the SAME response.
+For bulk imports (5+ items from files, previous scans, initial setup): use action="batch" with data={operations: [{action, data}, ...]}. Max 100 operations per batch.
+
+Changes are persisted to disk immediately.
+
+Actions and their required data fields:
+
+- batch: { operations: Array<{ action: string, data: object }> } — process multiple state updates in one call. Max 100 operations. Use for initial engagement setup, importing scan results, loading state from files. Each operation uses the same format as individual calls below.
+
+- create_engagement: { name: string }
+- load_engagement: { name: string }
+- reload_engagement: {} (reloads current engagement from disk)
+- add_host: { ip: string, hostname?: string, os?: string, services?: Array<{ port: number, protocol?: string, service?: string, version?: string, state?: string, banner?: string }> } — services are merged by port (not overwritten) on re-scan
+- delete_host: { ip: string }
+- add_vuln: { host_ip: string, title: string, severity?: "critical"|"high"|"medium"|"low"|"info", status?: "suspected"|"confirmed"|"exploited"|"false_positive", description?: string, evidence?: string, service_port?: number, references?: string[], mitre_attack_id?: string } — deduplicates by (title, service_port): re-adding updates the existing entry
+- update_vuln: { host_ip: string, vuln_id: string, status?: "suspected"|"confirmed"|"exploited"|"false_positive", severity?: string, evidence?: string, description?: string, title?: string }
+- delete_vuln: { host_ip: string, vuln_id: string }
+- add_credential: { id: string, cred_type?: string, username: string, value: string, source?: string, valid_for?: string[] } — re-adding same id updates the existing entry
+- delete_credential: { id: string }
+- add_access: { host_ip: string, access_type: string, username: string, level?: "none"|"user"|"root"|"system", credential_id?: string, details?: string } — deduplicates by (access_type, username): re-adding updates the existing entry
+- set_phase: { phase: "recon"|"enumeration"|"vuln_assess"|"exploitation"|"post_exploit"|"reporting" }
+- set_mode: { mode: "auto"|"free"|"guided" }
+- update_scope: { excludes?: string[], discovered_targets?: string[], notes?: string } — canonical targets are READ-ONLY after creation. Use discovered_targets for agent-found assets.
+- add_discovered_target: { target: string } — add a single discovered subdomain/IP to scope (dedup, validates against canonical patterns)
+- add_flag: { flag: string }
+- add_note: { note: string }
+- add_attack_step: { source: string, target: string, technique: string, result: string, success?: boolean, mitre_attack_id?: string }
+- set_domain: { domain_name: string, forest?: string, domain_sid?: string, domain_controllers?: string[], domain_admins?: string[], gpo_names?: string[], trusts?: Array<{ target_domain: string, trust_type?: string, trust_direction?: string, is_transitive?: boolean }>, password_policy?: { min_length?: number, lockout_threshold?: number, lockout_duration?: string, complexity_enabled?: boolean } }
+- update_domain: { ...any fields from set_domain to patch (domain must already exist) }
+- add_objective: { id: string, title: string, description?: string, status?: "not_started"|"in_progress"|"completed"|"blocked"|"abandoned", priority?: "critical"|"high"|"medium"|"low", category?: "ctf"|"pentest"|"bounty"|"red_team"|"custom", target_hosts?: string[], linked_vulns?: string[], linked_creds?: string[], flags?: string[], evidence?: string, notes?: string }
+- update_objective: { id: string, ...any fields from add_objective to patch }
+- complete_objective: { id: string, evidence?: string }
+- add_relationship: { source_type: "host"|"credential"|"vuln"|"service"|"domain"|"user"|"group", source_id: string, rel_type: "EXPLOITED_VIA"|"CREDENTIAL_FROM"|"REACHABLE_FROM"|"TRUSTS"|"MEMBER_OF"|"ADMIN_OF"|"PIVOT_TO"|"AUTHENTICATES_TO"|"LATERAL_MOVE"|"CONTROLS", target_type: (same as source_type), target_id: string, metadata?: string } — deduplicates by (source_id, rel_type, target_id)
+- delete_relationship: { source_id: string, rel_type: string, target_id: string }
+- add_decision: { decision: string, reasoning: string, alternatives?: string[], phase?: string, id?: string } — strategic decisions only (not tactical nmap flags). Auto-capped at 100.
+- update_decision_outcome: { id: string, outcome: "pending"|"successful"|"failed"|"abandoned"|"superseded", notes?: string }
+- add_alert: { title: string, severity: "critical"|"high"|"medium"|"low"|"info", details?: string, source_agent?: string, host_ip?: string, ttl_minutes?: number, id?: string } — inter-agent urgent findings. TTL defaults 60min, max 50 active.
+- acknowledge_alert: { id: string }
+- add_live_session: { session_type: "shell"|"meterpreter"|"tunnel"|"listener"|"proxy", host_ip: string, port?: number, username?: string, pid?: number, details?: string, local_port?: number, remote_target?: string, id?: string }
+- update_live_session: { id: string, alive?: boolean, last_seen?: string, details?: string, pid?: number, local_port?: number, remote_target?: string }
+- remove_live_session: { id: string }
+- add_network_segment: { cidr: string, name?: string, vlan?: number, gateway?: string, reachable_from?: string[], pivot_host?: string, notes?: string, id?: string }
+- update_network_segment: { id: string, ...any fields from add_network_segment to patch }
+- remove_network_segment: { id: string }
+- record_wordlist: { host_ip: string, port: number, tool_type: "dir_fuzz"|"brute"|"vhost"|"subdomain"|"user_enum"|"param_fuzz"|"password_spray", wordlist_path: string, results_count?: number, agent_type?: string } — track which wordlist was used against which host:port:tool_type. Deduplicates by (host_ip, port, tool_type, wordlist_path) — re-recording same combo returns "duplicate". Max 1000 entries. Use AFTER every fuzzing/brute-force run.
+- set_goal: { text: string } — set the engagement goal. All subsequent actions should serve this goal.
+- update_goal: { status?: "active"|"achieved"|"blocked"|"abandoned", evidence?: string } — update goal status. When achieved, include evidence.
+- clear_goal: {} — remove the current goal.
+- set_pause: { pause: "never"|"always"|"checkpoint" } — set pause-on-finding behavior. "never" = continuous (default). "always" = stop after every finding for user direction. "checkpoint" = pause briefly to show cumulative summary, continue unless redirected.
+- record_vector: { target: string (host:port/URL/endpoint), vector: string (technique, e.g. "open-redirect on /redirect"), status: "attempted"|"confirmed"|"resolved"|"blocked", tested_by?: string, evidence?: string, revisit_when?: string, attempt?: { technique: string, outcome: "failed"|"partial"|"success", detail?: string } } — settle an attack vector so no agent (this one or a parallel one) re-tests it BLINDLY. resolved=dead end, confirmed=vulnerable, attempted=inconclusive (retry only with a new technique), blocked=needs a precondition (set revisit_when). Deduplicates by (target, vector) — a re-probe bumps the attempt count. Max 300. Record EVERY dead end.
+  STATUS DISCIPLINE: use `resolved` ONLY when you are confident the vector is genuinely NOT exploitable. If you merely failed or couldn't reach it, use `attempted` (retry-safe) — over-marking `resolved` entrenches a false negative. A `resolved` verdict is CONDITIONAL on the info you had: new leverage (fresh creds/access, a new technique/exploit, a changed target) can legitimately re-open it — that is NOT blind re-testing. If a vector is only dead "for now, without creds", use `blocked` + revisit_when instead of `resolved`.
+  IN-VECTOR MEMORY: while grinding a hard exploit (deser gadget chains, payload variants, shell-stabilization tricks), pass `attempt` each turn to log the SPECIFIC technique tried and its outcome — e.g. attempt:{technique:"gadget CommonsCollections6", outcome:"failed", detail:"ClassNotFound on target classpath"}. These accumulate per-vector (dedup by technique, cap 20) and the FAILED ones are surfaced back in <resolved-vectors> so you (or a re-spawned subagent after compaction) never re-try the same dead-end sub-approach. Keep status="attempted" while grinding; promote to confirmed/resolved when the vector as a whole settles.
+
+Notes:
+- add_host supports domain_info: { domain?: string, is_dc?: boolean, computer_account?: string, forest?: string }
+- add_credential supports AD fields: domain?: string, ticket_type?: string ("TGT"|"TGS"|"ST"), service_principal?: string, ticket_expiry?: string
+- Alerts: subagents should add_alert for urgent findings (e.g. DC found, creds dumped, critical vuln). Coordinator sees alerts in OODA context.
+- Sessions: track every shell, tunnel, listener, proxy. Mark alive:false when dead. Helps coordinator know what's reachable.
+- Segments: map discovered network segments, VLANs, pivot paths. Reachable_from links segments to pivot hosts.

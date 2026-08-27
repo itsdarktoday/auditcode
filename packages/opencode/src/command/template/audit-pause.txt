@@ -1,0 +1,4 @@
+Configure autonomous audit pause behavior on discovering findings [never|always|checkpoint].
+- "never": run continuously across all phases.
+- "always": pause and request human auditor review immediately upon confirming a vulnerability.
+- "checkpoint": pause after each audit phase transition.
