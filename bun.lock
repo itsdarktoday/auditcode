@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pentestcode",
+      "name": "auditcode",
       "dependencies": {
         "@auditcode/plugin": "workspace:*",
         "@auditcode/script": "workspace:*",

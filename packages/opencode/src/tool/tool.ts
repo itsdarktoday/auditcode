@@ -97,14 +97,14 @@ export type InferDef<T> =
       : never
 
 // #2a: graduated anti-solo-takeover rail. In the field the coordinator (agent
-// "pentest") kept doing operational work itself (72 bash + 17 write + 3 edit in ONE
+// "audit") kept doing operational work itself (72 bash + 17 write + 3 edit in ONE
 // run) instead of delegating — ballooning its own context (68% of the run's
 // cache-read) and never standing up a real pivot. Count the coordinator's
 // consecutive operational tool-calls WITHOUT a dispatch: nudge at WARN (advisory
 // prepended to the tool output), hard-block at BLOCK (refuse to run). Reset on any
 // delegation (task / task_graph plan). recon/read/state calls are never counted or
 // blocked, so the coordinator can always observe + re-plan. Headless-safe (no
-// permission.ask/TTY dependency). Only the "pentest" coordinator is subject to it —
+// permission.ask/TTY dependency). Only the "audit" coordinator is subject to it —
 // subagents (exploiter, post_exploit, …) run operational tools freely.
 const COORDINATOR_AGENT = "audit"
 const OPERATIONAL_TOOL_IDS = new Set(["bash", "write", "edit"])

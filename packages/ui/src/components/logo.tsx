@@ -35,7 +35,7 @@ export const Logo = (props: { class?: string }) => {
   // Pixel wordmark spelling "auditcode" on a 6px grid, cell pitch 30.
   // The six glyphs shared with the old "opencode" mark (p, e, n, c, o, d) are
   // reused verbatim and translated into place; t and s are drawn as rects in
-  // the same style. "pentest" uses --icon-base, "code" uses --icon-strong-base
+  // the same style. "audit" uses --icon-base, "code" uses --icon-strong-base
   // to preserve the original two-tone emphasis.
   return (
     <svg

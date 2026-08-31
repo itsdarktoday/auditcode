@@ -28,7 +28,7 @@ target
 
 # Local dev files
 opencode-dev
-pentestcode-dev
+auditcode-dev
 UPCOMING_CHANGELOG.md
 logs/
 *.bun-build

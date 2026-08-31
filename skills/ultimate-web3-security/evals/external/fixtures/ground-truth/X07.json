@@ -1,0 +1,9 @@
+{
+  "exploit_id": "checked-arithmetic-safe",
+  "vulnerability_class": "checked_arithmetic",
+  "protocol": "CheckedArithmeticSafe",
+  "chain": "EVM",
+  "year": 2024,
+  "expected_findings": [],
+  "known_limitations": "NEGATIVE: checked arithmetic — compiler reverts on overflow."
+}

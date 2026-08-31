@@ -73,9 +73,9 @@ function resolveBinary() {
   
   const possiblePaths = [
     path.join(distDir, targetName, "bin", binaryName),
-    path.join(distDir, targetName, "bin", "pentestcode"),
+    path.join(distDir, targetName, "bin", "auditcode"),
     path.join(distDir, `auditcode-${targetPlatform}-${targetArch}-baseline`, "bin", binaryName),
-    path.join(distDir, `auditcode-${targetPlatform}-${targetArch}-baseline`, "bin", "pentestcode"),
+    path.join(distDir, `auditcode-${targetPlatform}-${targetArch}-baseline`, "bin", "auditcode"),
   ]
 
   for (const p of possiblePaths) {

@@ -1,0 +1,12 @@
+{
+  "exploit_id": "safe-uniswap-v2-stale-twap-2023",
+  "vulnerability_class": "NEGATIVE",
+  "protocol": "SafeUniswapV2StaleTwap",
+  "chain": "Ethereum",
+  "year": 2023,
+  "loss_usd": 0,
+  "expected_findings": [],
+  "expected_path_types": [],
+  "expected_hypotheses": [],
+  "known_limitations": "NEGATIVE: priceCumulative TWAP with observations.length + timeDelta. Has borrow() but TWAP window is enforced. Detector should NOT flag."
+}

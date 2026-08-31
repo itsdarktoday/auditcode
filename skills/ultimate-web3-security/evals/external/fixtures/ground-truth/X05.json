@@ -1,0 +1,17 @@
+{
+  "exploit_id": "rari-fuse-2022",
+  "vulnerability_class": "price_manipulation",
+  "protocol": "Rari Fuse",
+  "chain": "Ethereum",
+  "year": 2022,
+  "loss_usd": 10000000,
+  "expected_findings": ["PriceOracleManipulation"],
+  "expected_path_types": ["uniswap_v2_spot_price", "single_dex_manipulation"],
+  "expected_hypotheses": ["PriceManipulationCandidate"],
+  "known_limitations": [
+    "Minimal reproducer of Rari Fuse Pool oracle manipulation via Uniswap V2 spot price",
+    "Citation: https://rekt.news/rari-rekt/ — Rari Fuse pools lose $10M to price oracle exploit",
+    "Vulnerable pattern: Uniswap V2 getReserves() as single-DEX spot oracle for Fuse pool collateral",
+    "Critical action gated by price: borrow()"
+  ]
+}

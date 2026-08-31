@@ -1,0 +1,10 @@
+{
+  "exploit_id": "cpi-bridge-vuln-1",
+  "vulnerability_class": "unvalidated_cpi",
+  "protocol": "Cross-chain Bridge CPI",
+  "chain": "Solana",
+  "year": 2024,
+  "loss_usd": 200000,
+  "expected_findings": ["UnvalidatedCpi"],
+  "known_limitations": "Synthetic reproducer of cross-chain bridge CPI target substitution (documented in Solana security advisories). Token program passed as unconstrained AccountInfo."
+}

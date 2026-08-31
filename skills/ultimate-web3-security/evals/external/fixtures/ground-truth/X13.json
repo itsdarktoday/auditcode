@@ -1,0 +1,10 @@
+{
+  "exploit_id": "cpi-bridge-safe-1",
+  "vulnerability_class": "unvalidated_cpi",
+  "protocol": "Cross-chain Bridge CPI (safe)",
+  "chain": "Solana",
+  "year": 2024,
+  "loss_usd": 0,
+  "expected_findings": [],
+  "known_limitations": "NEGATIVE: has_one authority check constrains the source account."
+}

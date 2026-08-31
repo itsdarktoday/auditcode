@@ -1,0 +1,12 @@
+{
+  "exploit_id": "safe-chainlink-staleness-2023",
+  "vulnerability_class": "NEGATIVE",
+  "protocol": "SafeChainlink",
+  "chain": "Ethereum",
+  "year": 2023,
+  "loss_usd": 0,
+  "expected_findings": [],
+  "expected_path_types": [],
+  "expected_hypotheses": [],
+  "known_limitations": "NEGATIVE: correctly uses Chainlink with staleness + heartbeat checks. Price read from decentralized oracle network — not manipulable via flash-loan. Detector should NOT flag."
+}

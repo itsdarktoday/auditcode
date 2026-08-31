@@ -1,0 +1,10 @@
+{
+  "exploit_id": "missing-owner-safe",
+  "vulnerability_class": "missing_owner_check",
+  "protocol": "Missing Owner Safe",
+  "chain": "Solana",
+  "year": 2024,
+  "loss_usd": 0,
+  "expected_findings": [],
+  "known_limitations": "NEGATIVE: Account<T> provides ownership + discriminator. No missing owner."
+}

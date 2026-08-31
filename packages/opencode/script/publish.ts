@@ -19,8 +19,10 @@ async function publish(dir: string, name: string, version: string) {
     console.log(`already published ${name}@${version}`)
     return
   }
+  await $`rm -f *.tgz`.cwd(dir).nothrow()
   await $`bun pm pack`.cwd(dir)
-  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
+  const otpFlag = process.env.NPM_OTP ? `--otp=${process.env.NPM_OTP}` : ""
+  await $`npm publish *.tgz --access public --tag latest ${otpFlag}`.cwd(dir)
 }
 
 const binaries: Record<string, string> = {}
@@ -73,15 +75,15 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
 )
 
 for (const [name, ver] of Object.entries(binaries)) {
-  console.log(`Publishing ${name}@${ver}...`);
-  await publish(`./dist/${name}`, name, ver);
+  console.log(`Publishing ${name}@${ver}...`)
+  await publish(`./dist/${name}`, name, ver)
 }
-console.log(`Publishing ${pkg.name}-ai@${version}...`);
-await publish(`./dist/${pkg.name}`, `${pkg.name}-ai`, version);
+console.log(`Publishing ${pkg.name}-ai@${version}...`)
+await publish(`./dist/${pkg.name}`, `${pkg.name}-ai`, version)
 
 const image = "ghcr.io/itsdarktoday/auditcode"
 const platforms = "linux/amd64,linux/arm64"
-const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
+const tags = [`${image}:${version}`, `${image}:latest`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
 
 // registries
@@ -114,7 +116,7 @@ if (!Script.preview) {
     "",
     `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/itsdarktoday/auditcode/releases/download/v\${pkgver}\${_subver}/auditcode-linux-arm64.tar.gz")`,
     `sha256sums_aarch64=('${arm64Sha}')`,
-
+    "",
     `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.tar.gz::https://github.com/itsdarktoday/auditcode/releases/download/v\${pkgver}\${_subver}/auditcode-linux-x64.tar.gz")`,
     `sha256sums_x86_64=('${x64Sha}')`,
     "",
@@ -148,8 +150,8 @@ if (!Script.preview) {
     "# typed: false",
     "# frozen_string_literal: true",
     "",
-    "class Pentestcode < Formula",
-    `  desc "AI penetration testing agent for the terminal."`,
+    "class Auditcode < Formula",
+    `  desc "Autonomous Web3 & Smart Contract Security Auditing Harness for the terminal."`,
     `  homepage "https://github.com/itsdarktoday/auditcode"`,
     `  version "${Script.version.split("-")[0]}"`,
     "",
@@ -196,17 +198,15 @@ if (!Script.preview) {
   ].join("\n")
 
   const token = process.env.GITHUB_TOKEN
-  if (!token) {
-    console.error("GITHUB_TOKEN is required to update homebrew tap")
-    process.exit(1)
-  }
-  const tap = `https://x-access-token:${token}@github.com/itsdarktoday/homebrew-tap.git`
-  await $`rm -rf ./dist/homebrew-tap`
-  await $`git clone ${tap} ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/auditcode.rb").write(homebrewFormula)
-  await $`cd ./dist/homebrew-tap && git add auditcode.rb`
-  if ((await $`cd ./dist/homebrew-tap && git diff --cached --quiet`.nothrow()).exitCode !== 0) {
-    await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
-    await $`cd ./dist/homebrew-tap && git push`
+  if (token) {
+    const tap = `https://x-access-token:${token}@github.com/itsdarktoday/homebrew-tap.git`
+    await $`rm -rf ./dist/homebrew-tap`
+    await $`git clone ${tap} ./dist/homebrew-tap`
+    await Bun.file("./dist/homebrew-tap/auditcode.rb").write(homebrewFormula)
+    await $`cd ./dist/homebrew-tap && git add auditcode.rb`
+    if ((await $`cd ./dist/homebrew-tap && git diff --cached --quiet`.nothrow()).exitCode !== 0) {
+      await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
+      await $`cd ./dist/homebrew-tap && git push`
+    }
   }
 }

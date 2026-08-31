@@ -1,0 +1,19 @@
+{
+  "exploit_id": "inverse-finance-2022",
+  "vulnerability_class": "price_manipulation",
+  "protocol": "Inverse Finance",
+  "chain": "Ethereum",
+  "year": 2022,
+  "loss_usd": 1200000,
+  "expected_findings": ["PriceOracleManipulation"],
+  "expected_path_types": ["single_feed_no_staleness", "no_round_validation"],
+  "expected_hypotheses": ["PriceManipulationCandidate"],
+  "known_limitations": [
+    "Minimal reproducer: single Chainlink feed read with no staleness or round validation",
+    "Citation: https://rekt.news/inverse-rekt/ — Inverse Finance hit by $1.2M oracle manipulation",
+    "Citation: https://blog.inverse.finance/exploit-postmortem-2022-06-16",
+    "Vulnerable pattern: latestPrice() on single feed with no block.timestamp/updatedAt/roundId checks",
+    "The feed's internal TWAP was irrelevant — attacker manipulated the underlying DEX pool directly",
+    "Critical action gated by price: depositAndBorrow()"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "exploit_id": "balancer-flashloan-2023",
+  "vulnerability_class": "price_manipulation",
+  "protocol": "Balancer Vault",
+  "chain": "Ethereum",
+  "year": 2023,
+  "loss_usd": 5000000,
+  "expected_findings": ["PriceOracleManipulation"],
+  "expected_path_types": ["internal_exchange_rate", "flash_loan_ratio_skew"],
+  "expected_hypotheses": ["PriceManipulationCandidate"],
+  "known_limitations": [
+    "Minimal reproducer of Balancer internal exchange rate manipulation via flash-loan",
+    "Citation: https://rekt.news/balancer-rekt/ — Balancer pools lose funds to flash loan price manipulation",
+    "Vulnerable pattern: totalUnderlying/totalSupply exchange rate as price oracle",
+    "Critical action gated by price: mint()"
+  ]
+}

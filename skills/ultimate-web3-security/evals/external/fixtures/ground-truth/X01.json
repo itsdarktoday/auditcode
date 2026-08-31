@@ -1,0 +1,18 @@
+{
+  "exploit_id": "bzx-2020",
+  "vulnerability_class": "price_manipulation",
+  "protocol": "bZx (Fulcrum)",
+  "chain": "Ethereum",
+  "year": 2020,
+  "loss_usd": 8000000,
+  "expected_findings": ["PriceOracleManipulation"],
+  "expected_path_types": ["uniswap_v2_spot_price", "single_dex_manipulation"],
+  "expected_hypotheses": ["PriceManipulationCandidate"],
+  "known_limitations": [
+    "Minimal reproducer of the first bZx attack (Feb 6 2020)",
+    "Citation: https://rekt.news/bzx-rekt/ — bZx loses $8M in two transactions",
+    "Citation: https://medium.com/bzx-network/sniper-attack-on-bzx-protocol-a0f705565a8a",
+    "Vulnerable pattern: Uniswap V2 spot price (getReserves) as collateral oracle",
+    "Critical action gated by price: borrow()"
+  ]
+}

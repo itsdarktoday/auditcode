@@ -1,0 +1,17 @@
+{
+  "exploit_id": "harvest-finance-2020",
+  "vulnerability_class": "price_manipulation",
+  "protocol": "Harvest Finance",
+  "chain": "Ethereum",
+  "year": 2020,
+  "loss_usd": 34000000,
+  "expected_findings": ["PriceOracleManipulation"],
+  "expected_path_types": ["curve_pool_reserves", "flash_loan_share_skew"],
+  "expected_hypotheses": ["PriceManipulationCandidate"],
+  "known_limitations": [
+    "Minimal reproducer of Harvest Finance vault share manipulation via Curve pool",
+    "Citation: https://rekt.news/harvest-finance-rekt/ — Harvest Finance loses $34M to flash loan attack",
+    "Vulnerable pattern: Curve pool getReserves() used as price oracle for share valuation",
+    "Critical action gated by price: deposit() / withdraw()"
+  ]
+}

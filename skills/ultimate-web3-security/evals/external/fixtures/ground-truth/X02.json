@@ -1,0 +1,17 @@
+{
+  "exploit_id": "cream-finance-2021",
+  "vulnerability_class": "price_manipulation",
+  "protocol": "Cream Finance",
+  "chain": "Ethereum",
+  "year": 2021,
+  "loss_usd": 130000000,
+  "expected_findings": ["PriceOracleManipulation"],
+  "expected_path_types": ["internal_pool_exchange_rate", "flash_loan_ratio_skew"],
+  "expected_hypotheses": ["PriceManipulationCandidate"],
+  "known_limitations": [
+    "Minimal reproducer; real exploit involved multiple flash-loan rounds",
+    "Citation: https://rekt.news/cream-rekt/ — Cream Finance loses $130M in flash loan exploit",
+    "Vulnerable pattern: internal cToken exchange rate used as price oracle (totalUnderlying/totalCToken)",
+    "Critical action gated by price: borrow()"
+  ]
+}

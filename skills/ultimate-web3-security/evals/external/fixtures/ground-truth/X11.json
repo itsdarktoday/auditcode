@@ -1,0 +1,12 @@
+{
+  "exploit_id": "missing-signer-vuln",
+  "vulnerability_class": "missing_signer_check",
+  "protocol": "Missing Signer Vuln",
+  "chain": "Solana",
+  "year": 2024,
+  "loss_usd": 0,
+  "expected_findings": [],
+  "expected_path_types": [],
+  "expected_hypotheses": [],
+  "known_limitations": "NEGATIVE: authority account referenced by has_one but lacks Signer. Fires via VULN_FIXTURES corpus assertion (count >= 1)."
+}
