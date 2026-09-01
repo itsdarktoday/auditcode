@@ -9,7 +9,7 @@ import { PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import { Session } from "./session"
 import PROMPT_RECON from "./prompt/recon-mode.txt"
-import PENTEST_SWITCH from "./prompt/pentest-switch.txt"
+import AUDIT_SWITCH from "./prompt/audit-switch.txt"
 import RECON_MODE from "./prompt/recon-plan-mode.txt"
 
 export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
@@ -35,13 +35,13 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
       })
     }
     const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "recon")
-    if (wasPlan && input.agent.name === "pentest") {
+    if (wasPlan && input.agent.name === "audit") {
       userMessage.parts.push({
         id: PartID.ascending(),
         messageID: userMessage.info.id,
         sessionID: userMessage.info.sessionID,
         type: "text",
-        text: PENTEST_SWITCH,
+        text: AUDIT_SWITCH,
         synthetic: true,
       })
     }
@@ -59,8 +59,8 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
       sessionID: userMessage.info.sessionID,
       type: "text",
       text: exists
-        ? `${PENTEST_SWITCH}\n\nA plan file exists at ${plan}. You should execute on the plan defined within it`
-        : PENTEST_SWITCH,
+        ? `${AUDIT_SWITCH}\n\nA plan file exists at ${plan}. You should execute on the plan defined within it`
+        : AUDIT_SWITCH,
       synthetic: true,
     })
     userMessage.parts.push(part)

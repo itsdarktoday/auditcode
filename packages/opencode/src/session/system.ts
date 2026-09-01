@@ -4,7 +4,6 @@ import { Context, Effect, Layer } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 
 import PROMPT_AUDIT from "./prompt/audit.txt"
-import PROMPT_KERNEL from "./prompt/kernel.txt"
 import PROMPT_KERNEL_AUDIT from "./prompt/kernel-audit.txt"
 import PROMPT_KERNEL_SUBAGENT from "./prompt/kernel-subagent.txt"
 
@@ -59,7 +58,7 @@ const layer = Layer.effect(
 
     return Service.of({
       kernel: Effect.fn("SystemPrompt.kernel")(function* (agent: Agent.Info) {
-        const parts = [PROMPT_KERNEL, PROMPT_KERNEL_AUDIT]
+        const parts = [PROMPT_KERNEL_AUDIT]
         if (agent.mode === "subagent") parts.push(PROMPT_KERNEL_SUBAGENT)
         return parts.join("\n\n")
       }),

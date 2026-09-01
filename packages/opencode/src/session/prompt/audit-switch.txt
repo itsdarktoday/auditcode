@@ -1,0 +1,2 @@
+Your operational mode has changed from recon to audit.
+Execute the smart contract security audit plan, analyze invariants, and verify findings.

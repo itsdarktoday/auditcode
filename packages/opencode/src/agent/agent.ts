@@ -25,7 +25,6 @@ import PROMPT_POC_DEV from "../session/prompt/poc-dev.txt"
 import PROMPT_SOLANA from "../session/prompt/solana.txt"
 import PROMPT_CRITIC from "../session/prompt/critic.txt"
 import PROMPT_REPORTER from "../session/prompt/reporter.txt"
-import PROMPT_PENTEST from "../session/prompt/audit.txt"
 
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
@@ -495,26 +494,6 @@ const layer = Layer.effect(
             prompt: PROMPT_REPORTER,
             options: {},
             mode: "subagent",
-            native: true,
-          },
-          pentest: {
-            name: "pentest",
-            description: "Lead Auditor alias.",
-            steps: 300,
-            options: {},
-            permission: Permission.merge(
-              defaults,
-              Permission.fromConfig({
-                question: "allow",
-                plan_enter: "allow",
-                state_query: "allow",
-                state_update: "allow",
-                report_gen: "allow",
-                task_graph: "allow",
-              }),
-              user,
-            ),
-            mode: "primary",
             native: true,
           },
 
