@@ -7,8 +7,8 @@ import DESCRIPTION from "./report-gen.txt"
 import { Tool } from "./tool"
 
 export const Parameters = Schema.Struct({
-  format: Schema.optional(Schema.Literals(["markdown", "json", "sherlock", "code4rena", "immunefi"])).annotate({
-    description: "Output format: markdown (default standard report), json (raw state), sherlock (Sherlock contest format), code4rena (Code4rena contest format), immunefi (Immunefi bug bounty format)",
+  format: Schema.optional(Schema.Literals(["markdown", "json", "sherlock", "code4rena", "immunefi", "hackenproof"])).annotate({
+    description: "Output format: markdown (default standard report), json (raw state), sherlock (Sherlock contest format), code4rena (Code4rena contest format), immunefi (Immunefi bug bounty format), hackenproof (HackenProof bug bounty format)",
   }),
   sections: Schema.optional(Schema.Array(Schema.String)).annotate({
     description:
@@ -322,6 +322,53 @@ function generateImmunefiReport(state: EngagementSchema.State): string {
   return lines.join("\n")
 }
 
+function generateHackenProofReport(state: EngagementSchema.State): string {
+  const vulns = getDedupedVulns(state)
+  if (vulns.length === 0) return "# HackenProof Bug Bounty Reports\n\nNo findings recorded."
+  const lines: string[] = [`# HackenProof Bug Bounty Reports — ${state.name}`, ""]
+  for (let i = 0; i < vulns.length; i++) {
+    const v = vulns[i]
+    const sev = (v.severity ?? "high").toUpperCase()
+    const id = v.id ?? `HP-${i + 1}`
+    lines.push(`## [${id}] ${v.title}`)
+    lines.push("")
+    lines.push(`- **Target Asset**: \`${v.contract_name ?? "Smart Contract"}\``)
+    lines.push(`- **Vulnerability Category**: \`${v.bug_class ?? "Smart Contract Flaw"}\``)
+    lines.push(`- **Severity**: **${sev}**`)
+    if (v.function_name) lines.push(`- **Vulnerable Function**: \`${v.function_name}()\``)
+    if (v.line_start) lines.push(`- **Affected Lines**: ${v.line_start}${v.line_end ? `-${v.line_end}` : ""}`)
+    lines.push("")
+    lines.push("### Summary")
+    lines.push(v.description || v.title)
+    lines.push("")
+    lines.push("### Technical Details & Root Cause")
+    if (v.root_cause) lines.push(`**Root Cause**: ${v.root_cause}\n`)
+    if (v.description && v.root_cause) lines.push(v.description)
+    lines.push("")
+    lines.push("### Impact Assessment")
+    lines.push(v.impact || "Direct financial loss, unauthorized token minting/drain, or critical protocol state compromise.")
+    lines.push("")
+    if (v.attack_path) {
+      lines.push("### Step-by-Step Proof of Exploitation")
+      lines.push(v.attack_path)
+      lines.push("")
+    }
+    if (v.proof_of_concept) {
+      lines.push("### Proof of Concept (PoC)")
+      lines.push("```solidity")
+      lines.push(v.proof_of_concept)
+      lines.push("```")
+      lines.push("")
+    }
+    lines.push("### Suggested Remediation")
+    lines.push(v.minimal_fix ? `\`\`\`diff\n${v.minimal_fix}\n\`\`\`` : "Implement strict input validation, invariant checks, and reentrancy protections.")
+    lines.push("")
+    lines.push("---")
+    lines.push("")
+  }
+  return lines.join("\n")
+}
+
 function generateRecommendations(): string {
   return `## General Security Recommendations & Best Practices
 
@@ -343,7 +390,7 @@ export const ReportGenTool = Tool.define(
       parameters: Parameters,
       execute: (
         params: {
-          format?: "markdown" | "json" | "sherlock" | "code4rena" | "immunefi"
+          format?: "markdown" | "json" | "sherlock" | "code4rena" | "immunefi" | "hackenproof"
           sections?: string[]
           output_path?: string
         },
@@ -372,6 +419,8 @@ export const ReportGenTool = Tool.define(
             content = generateCode4renaReport(state)
           } else if (format === "immunefi") {
             content = generateImmunefiReport(state)
+          } else if (format === "hackenproof") {
+            content = generateHackenProofReport(state)
           } else {
             content = [
               generateExecutiveSummary(state),

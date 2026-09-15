@@ -325,7 +325,7 @@
     },
     "packages/opencode": {
       "name": "auditcode",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "bin": {
         "auditcode": "./bin/auditcode",
       },

@@ -169,7 +169,7 @@ State survives sessions: pause, resume, or export reports anytime without losing
 | [`signature_lookup`](file:///packages/opencode/src/tool/signature-lookup.ts) | Resolves 4-byte selectors (`0xa9059cbb`) and event topics via OpenChain database |
 | [`erc_validate`](file:///packages/opencode/src/tool/erc-validate.ts) | Validates ERC20, ERC721, ERC1155, and ERC4626 compliance and inflation hazards |
 | [`phase_control`](file:///packages/opencode/src/tool/phase-control.ts) | Manages 6 audit phases with strict quality transition gates |
-| [`report_gen`](file:///packages/opencode/src/tool/report-gen.ts) | Exports institutional Markdown and JSON audit reports |
+| [`report_gen`](file:///packages/opencode/src/tool/report-gen.ts) | Exports Markdown, JSON, Sherlock, Code4rena, Immunefi, and HackenProof audit reports |
 | [`state_query`](file:///packages/opencode/src/tool/state-query.ts) | Reads contracts, invariants, actor roles, PoCs, and findings |
 | [`state_update`](file:///packages/opencode/src/tool/state-update.ts) | Records mutations and critic verdicts in atomic transactions |
 
