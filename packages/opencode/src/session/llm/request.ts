@@ -195,15 +195,24 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     headers: {
       ...(input.model.providerID.startsWith("opencode")
         ? {
-            ...(opencodeProjectID ? { "x-auditcode-project": opencodeProjectID } : {}),
+            ...(opencodeProjectID
+              ? {
+                  "x-auditcode-project": opencodeProjectID,
+                  "x-opencode-project": opencodeProjectID,
+                }
+              : {}),
             "x-auditcode-session": input.sessionID,
+            "x-opencode-session": input.sessionID,
             "x-auditcode-request": input.user.id,
+            "x-opencode-request": input.user.id,
             "x-auditcode-client": input.flags.client,
+            "x-opencode-client": input.flags.client,
             "User-Agent": USER_AGENT,
           }
         : {
             "x-session-affinity": input.sessionID,
             "X-Session-Id": input.sessionID,
+            "x-opencode-session": input.sessionID,
             ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
             "User-Agent": USER_AGENT,
           }),
