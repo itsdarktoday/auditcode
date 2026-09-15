@@ -26,7 +26,7 @@
 
 Hard-forked from [OpenCode](https://github.com/anomalyco/opencode) and [PentestCode](https://github.com/s0ld13rr/pentestcode), stripped of web2 pentesting abstractions and re-engineered from the ground up for Web3 security and smart contract auditing. Created and maintained by **[itsdarktoday](https://github.com/itsdarktoday)** and **[0xscarfac3](https://github.com/0xscarfac3)**.
 
-> **v1.1.0 Ready** — Battle-tested on EVM protocols, DeFi vaults, and competitive audit contests (Code4rena, Sherlock, Cantina, Immunefi). [File an issue](https://github.com/itsdarktoday/auditcode/issues) to report feedback or contribute.
+> **v1.1.0 Ready** — Battle-tested on EVM protocols, DeFi vaults, and competitive audit contests (Code4rena, Sherlock, Cantina, Immunefi, Hackenproof). [File an issue](https://github.com/itsdarktoday/auditcode/issues) to report feedback or contribute.
 
 ---
 
