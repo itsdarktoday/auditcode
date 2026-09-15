@@ -1,14 +1,14 @@
-import * as nodeFs from "node:fs"
-import * as nodePath from "node:path"
+import fs from "node:fs"
+import path from "node:path"
 import { Effect, Schema } from "effect"
 import { EngagementStore } from "@auditcode/core/engagement/store"
 import { EngagementSchema } from "@auditcode/core/engagement/schema"
 import DESCRIPTION from "./report-gen.txt"
-import * as Tool from "./tool"
+import { Tool } from "./tool"
 
 export const Parameters = Schema.Struct({
-  format: Schema.optional(Schema.Literals(["markdown", "json"])).annotate({
-    description: "Output format (default: markdown)",
+  format: Schema.optional(Schema.Literals(["markdown", "json", "sherlock", "code4rena", "immunefi"])).annotate({
+    description: "Output format: markdown (default standard report), json (raw state), sherlock (Sherlock contest format), code4rena (Code4rena contest format), immunefi (Immunefi bug bounty format)",
   }),
   sections: Schema.optional(Schema.Array(Schema.String)).annotate({
     description:
@@ -22,6 +22,17 @@ export const Parameters = Schema.Struct({
 function severityOrder(s?: string): number {
   const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, gas: 4, info: 5 }
   return order[s ?? "medium"] ?? 6
+}
+
+function getDedupedVulns(state: EngagementSchema.State): EngagementSchema.Vulnerability[] {
+  const topVulns = Object.values(state.vulns ?? {})
+  const hostVulns = Object.values(state.hosts).flatMap((h) => h.vulns)
+  const vulnMap = new Map<string, EngagementSchema.Vulnerability>()
+  for (const v of [...hostVulns, ...topVulns]) {
+    const id = v.id || `${v.contract_name || "c"}-${v.title}`
+    vulnMap.set(id, v)
+  }
+  return [...vulnMap.values()].sort((a, b) => severityOrder(a.severity) - severityOrder(b.severity))
 }
 
 function generateExecutiveSummary(state: EngagementSchema.State): string {
@@ -109,16 +120,12 @@ function generateFindings(state: EngagementSchema.State): string {
   lines.push("## Detailed Vulnerability Findings")
   lines.push("")
 
-  const topVulns = Object.values(state.vulns ?? {})
-  const hostVulns = Object.values(state.hosts).flatMap((h) => h.vulns)
-  const allVulns = [...topVulns, ...hostVulns]
+  const sorted = getDedupedVulns(state)
 
-  if (allVulns.length === 0) {
+  if (sorted.length === 0) {
     lines.push("No vulnerabilities were recorded in the audit state.")
     return lines.join("\n")
   }
-
-  const sorted = [...allVulns].sort((a, b) => severityOrder(a.severity) - severityOrder(b.severity))
 
   const sevIcons: Record<string, string> = {
     critical: "🔴 [CRITICAL]",
@@ -186,6 +193,135 @@ function generateFindings(state: EngagementSchema.State): string {
   return lines.join("\n")
 }
 
+function generateSherlockReport(state: EngagementSchema.State): string {
+  const vulns = getDedupedVulns(state)
+  if (vulns.length === 0) return "# Sherlock Contest Findings\n\nNo findings recorded."
+  const lines: string[] = [`# Sherlock Audit Findings — ${state.name}`, ""]
+  for (let i = 0; i < vulns.length; i++) {
+    const v = vulns[i]
+    const sev = (v.severity ?? "medium").toUpperCase()
+    const id = v.id ?? `M-${i + 1}`
+    lines.push(`## [${id}] ${v.title}`)
+    lines.push("")
+    lines.push(`**Severity**: ${sev === "CRITICAL" || sev === "HIGH" ? "High" : "Medium"}`)
+    lines.push("")
+    lines.push("### Summary")
+    lines.push(v.description || v.title)
+    lines.push("")
+    lines.push("### Vulnerability Detail")
+    lines.push(`- Contract: \`${v.contract_name ?? "Unknown"}\``)
+    if (v.function_name) lines.push(`- Function: \`${v.function_name}()\``)
+    if (v.line_start) lines.push(`- Lines: ${v.line_start}${v.line_end ? `-${v.line_end}` : ""}`)
+    if (v.root_cause) lines.push(`- Root Cause: ${v.root_cause}`)
+    if (v.attack_path) {
+      lines.push("")
+      lines.push(v.attack_path)
+    }
+    lines.push("")
+    lines.push("### Impact")
+    lines.push(v.impact || "Direct financial loss or protocol invariant violation.")
+    lines.push("")
+    if (v.proof_of_concept) {
+      lines.push("### Code Snippet / Proof of Concept")
+      lines.push("```solidity")
+      lines.push(v.proof_of_concept)
+      lines.push("```")
+      lines.push("")
+    }
+    lines.push("### Tool used")
+    lines.push(v.discovered_by ? `AuditCode (${v.discovered_by})` : "AuditCode Autonomous Agent Harness & Manual Review")
+    lines.push("")
+    lines.push("### Recommendation")
+    lines.push(v.minimal_fix ? `\`\`\`diff\n${v.minimal_fix}\n\`\`\`` : "Review access control and state updates according to Checks-Effects-Interactions pattern.")
+    lines.push("")
+    lines.push("---")
+    lines.push("")
+  }
+  return lines.join("\n")
+}
+
+function generateCode4renaReport(state: EngagementSchema.State): string {
+  const vulns = getDedupedVulns(state)
+  if (vulns.length === 0) return "# Code4rena Contest Findings\n\nNo findings recorded."
+  const lines: string[] = [`# Code4rena Contest Findings — ${state.name}`, ""]
+  for (let i = 0; i < vulns.length; i++) {
+    const v = vulns[i]
+    const id = v.id ?? `H-${i + 1}`
+    lines.push(`## [${id}] ${v.title}`)
+    lines.push("")
+    lines.push("### Lines of code")
+    const loc = `${v.contract_name ?? "Contract"}.sol#L${v.line_start ?? 1}${v.line_end ? `-L${v.line_end}` : ""}`
+    lines.push(`- \`${loc}\``)
+    lines.push("")
+    lines.push("### Impact")
+    lines.push(v.impact || "High/Medium impact on protocol funds or invariants.")
+    lines.push("")
+    lines.push("### Vulnerability details")
+    if (v.description) lines.push(v.description)
+    if (v.root_cause) lines.push(`\n**Root cause**: ${v.root_cause}`)
+    if (v.attack_path) lines.push(`\n**Attack path**:\n${v.attack_path}`)
+    lines.push("")
+    if (v.proof_of_concept) {
+      lines.push("### Proof of Concept")
+      lines.push("```solidity")
+      lines.push(v.proof_of_concept)
+      lines.push("```")
+      lines.push("")
+    }
+    lines.push("### Tools Used")
+    lines.push("AuditCode Multi-Agent Security Harness, Foundry")
+    lines.push("")
+    lines.push("### Recommended Mitigation Steps")
+    lines.push(v.minimal_fix ? `\`\`\`diff\n${v.minimal_fix}\n\`\`\`` : "Apply appropriate input validation and state checks.")
+    lines.push("")
+    lines.push("---")
+    lines.push("")
+  }
+  return lines.join("\n")
+}
+
+function generateImmunefiReport(state: EngagementSchema.State): string {
+  const vulns = getDedupedVulns(state)
+  if (vulns.length === 0) return "# Immunefi Bug Bounty Reports\n\nNo findings recorded."
+  const lines: string[] = [`# Immunefi Bug Bounty Reports — ${state.name}`, ""]
+  for (let i = 0; i < vulns.length; i++) {
+    const v = vulns[i]
+    const sev = (v.severity ?? "critical").toUpperCase()
+    lines.push(`## Bug Report: ${v.title}`)
+    lines.push("")
+    lines.push(`- **Target Asset**: \`${v.contract_name ?? "Smart Contract"}\``)
+    lines.push(`- **Vulnerability Type**: \`${v.bug_class ?? "Smart Contract Defect"}\``)
+    lines.push(`- **Severity**: **${sev}**`)
+    if (v.immunefi_id) lines.push(`- **Immunefi Impact ID**: \`${v.immunefi_id}\``)
+    lines.push("")
+    lines.push("### Description")
+    lines.push(v.description || v.title)
+    if (v.root_cause) lines.push(`\n**Root Cause**: ${v.root_cause}`)
+    lines.push("")
+    lines.push("### Impact")
+    lines.push(v.impact || "Direct theft of user or vault funds / permanent freeze of capital.")
+    lines.push("")
+    if (v.attack_path) {
+      lines.push("### Step-by-Step Exploit Scenario")
+      lines.push(v.attack_path)
+      lines.push("")
+    }
+    if (v.proof_of_concept) {
+      lines.push("### Proof of Concept (PoC)")
+      lines.push("```solidity")
+      lines.push(v.proof_of_concept)
+      lines.push("```")
+      lines.push("")
+    }
+    lines.push("### Remediation")
+    lines.push(v.minimal_fix ? `\`\`\`diff\n${v.minimal_fix}\n\`\`\`` : "Mitigate according to best security practices.")
+    lines.push("")
+    lines.push("---")
+    lines.push("")
+  }
+  return lines.join("\n")
+}
+
 function generateRecommendations(): string {
   return `## General Security Recommendations & Best Practices
 
@@ -206,7 +342,11 @@ export const ReportGenTool = Tool.define(
       description: DESCRIPTION,
       parameters: Parameters,
       execute: (
-        params: { format?: "markdown" | "json"; sections?: string[]; output_path?: string },
+        params: {
+          format?: "markdown" | "json" | "sherlock" | "code4rena" | "immunefi"
+          sections?: string[]
+          output_path?: string
+        },
         _ctx: Tool.Context,
       ): Effect.Effect<Tool.ExecuteResult> =>
         Effect.gen(function* () {
@@ -223,49 +363,39 @@ export const ReportGenTool = Tool.define(
           const format = params.format ?? "markdown"
           const output_path = params.output_path
 
+          let content = ""
           if (format === "json") {
-            const jsonContent = JSON.stringify(state, undefined, 2)
-            if (output_path) {
-              const dir = nodePath.dirname(output_path)
-              nodeFs.mkdirSync(dir, { recursive: true })
-              nodeFs.writeFileSync(output_path, jsonContent, "utf-8")
-              return {
-                title: `Report Exported: ${output_path}`,
-                metadata: { format: "json", output_path },
-                output: `Audit report exported in JSON format to ${output_path}`,
-              }
-            }
-            return {
-              title: "JSON Audit Report",
-              metadata: { format: "json" },
-              output: jsonContent,
-            }
+            content = JSON.stringify(state, undefined, 2)
+          } else if (format === "sherlock") {
+            content = generateSherlockReport(state)
+          } else if (format === "code4rena") {
+            content = generateCode4renaReport(state)
+          } else if (format === "immunefi") {
+            content = generateImmunefiReport(state)
+          } else {
+            content = [
+              generateExecutiveSummary(state),
+              generateScope(state),
+              generateFindings(state),
+              generateRecommendations(),
+            ].join("\n\n")
           }
 
-          const reportParts = [
-            generateExecutiveSummary(state),
-            generateScope(state),
-            generateFindings(state),
-            generateRecommendations(),
-          ]
-
-          const reportMd = reportParts.join("\n\n")
-
           if (output_path) {
-            const dir = nodePath.dirname(output_path)
-            nodeFs.mkdirSync(dir, { recursive: true })
-            nodeFs.writeFileSync(output_path, reportMd, "utf-8")
+            const dir = path.dirname(output_path)
+            fs.mkdirSync(dir, { recursive: true })
+            fs.writeFileSync(output_path, content, "utf-8")
             return {
               title: `Report Exported: ${output_path}`,
-              metadata: { format: "markdown", output_path },
-              output: `Audit report written to ${output_path} (${Object.keys(state.contracts ?? {}).length} contracts, ${EngagementSchema.summary(state).vulnerabilities_total} findings)`,
+              metadata: { format, output_path },
+              output: `Audit report (${format}) written to ${output_path} (${Object.keys(state.contracts ?? {}).length} contracts, ${getDedupedVulns(state).length} findings)`,
             }
           }
 
           return {
-            title: "Smart Contract Audit Report",
-            metadata: { format: "markdown" },
-            output: reportMd,
+            title: `Smart Contract Audit Report (${format})`,
+            metadata: { format },
+            output: content,
           }
         }),
     }

@@ -76,6 +76,7 @@ export interface Interface {
   readonly addVuln: (hostIp: string, vuln: EngagementSchema.Vulnerability) => Effect.Effect<void>
   readonly updateVuln: (hostIp: string, vulnId: string, patch: Partial<{ -readonly [K in keyof EngagementSchema.Vulnerability]: EngagementSchema.Vulnerability[K] }>) => Effect.Effect<boolean>
   readonly deleteVuln: (hostIp: string, vulnId: string) => Effect.Effect<boolean>
+  readonly getVulns: () => Effect.Effect<Record<string, EngagementSchema.Vulnerability>>
   readonly addCredential: (id: string, cred: Omit<EngagementSchema.Credential, "id">) => Effect.Effect<void>
   readonly deleteCredential: (id: string) => Effect.Effect<boolean>
   readonly addAccess: (hostIp: string, access: EngagementSchema.Access) => Effect.Effect<void>
@@ -528,8 +529,13 @@ const layer = Layer.effect(
           flags: [],
           attack_path: [],
           task_tree: [],
-          current_phase: "recon",
+          current_phase: "scope_recon",
           mode: "auto",
+          contracts: {},
+          invariants: {},
+          actors: {},
+          pocs: {},
+          vulns: {},
           notes: [],
         }
         yield* Ref.set(stateRef, state)
@@ -602,44 +608,58 @@ const layer = Layer.effect(
       }),
 
       addVuln: Effect.fn("EngagementStore.addVuln")(function* (hostIp, vuln) {
+        const vulnId = vuln.id || `AC-${Date.now().toString(36).toUpperCase()}`
+        const resolvedContract = vuln.contract_name || (hostIp && !hostIp.includes(".") && hostIp !== "Protocol" ? hostIp : undefined)
+        const resolvedVuln: EngagementSchema.Vulnerability = {
+          ...vuln,
+          id: vulnId,
+          ...(resolvedContract ? { contract_name: resolvedContract } : {}),
+        }
         const action = yield* Ref.modify(stateRef, (current) => {
           if (!current) return ["skip" as const, current]
-          const host = current.hosts[hostIp]
-          if (!host) return ["skip" as const, current]
-          const isDupe = host.vulns.some(
-            (v) => v.title === vuln.title && v.service_port === vuln.service_port,
-          )
-          if (isDupe) {
-            const updatedVulns = host.vulns.map((v) =>
-              v.title === vuln.title && v.service_port === vuln.service_port ? { ...v, ...vuln } : v,
+          const vulns = { ...(current.vulns ?? {}) }
+          vulns[vulnId] = resolvedVuln
+
+          const host = hostIp ? current.hosts[hostIp] : undefined
+          if (host) {
+            const isDupe = host.vulns.some(
+              (v) => v.id === vulnId || (v.title === vuln.title && v.service_port === vuln.service_port),
             )
-            return ["updated" as const, { ...current, hosts: { ...current.hosts, [hostIp]: { ...host, vulns: updatedVulns } } }]
+            const updatedHostVulns = isDupe
+              ? host.vulns.map((v) => (v.id === vulnId || (v.title === vuln.title && v.service_port === vuln.service_port) ? resolvedVuln : v))
+              : [...host.vulns, resolvedVuln]
+            return ["created" as const, { ...current, vulns, hosts: { ...current.hosts, [hostIp]: { ...host, vulns: updatedHostVulns } } }]
           }
-          return ["created" as const, { ...current, hosts: { ...current.hosts, [hostIp]: { ...host, vulns: [...host.vulns, vuln] } } }]
+
+          return ["created" as const, { ...current, vulns }]
         })
         if (action === "skip") return
-        if (action === "created") {
-          yield* logChange("add_vuln", "vuln", vuln.id, `[${(vuln.severity ?? "medium").toUpperCase()}] ${vuln.title} on ${hostIp}${vuln.confidence !== undefined ? ` conf:${vuln.confidence}` : ""}`)
-          const state = yield* Ref.get(stateRef)
-          if (state) {
-            const sevIcon: Record<string, string> = { critical: "!!!", high: "!!", medium: "!", low: ".", info: "i" }
-            const findingLines = [
-              `## ${sevIcon[vuln.severity ?? "medium"] ?? "!"} [${(vuln.severity ?? "medium").toUpperCase()}] ${vuln.title}`,
-              `**Time**: ${new Date().toISOString()}`,
-              `**Host**: ${hostIp}${vuln.service_port ? `:${vuln.service_port}` : ""}`,
-              `**Status**: ${vuln.status ?? "suspected"}${vuln.confidence !== undefined ? ` (confidence: ${(vuln.confidence * 100).toFixed(0)}%)` : ""}`,
-              ...(vuln.description ? [`**Description**: ${vuln.description}`] : []),
-              ...(vuln.evidence ? [`**Evidence**: \`${vuln.evidence}\``] : []),
-              ...(vuln.evidence_items?.length ? [
-                `**Evidence Chain**:`,
-                ...vuln.evidence_items.map((e) =>
-                  `- \`${e.tool}\`${e.source_agent ? ` (${e.source_agent})` : ""}: ${e.command ?? "(no command)"}${e.verification_status ? ` [${e.verification_status}]` : ""}`
-                ),
-              ] : []),
-              `---`,
-            ]
-            appendFinding(state.name, findingLines.join("\n"))
-          }
+        yield* logChange("add_vuln", "vuln", vulnId, `[${(resolvedVuln.severity ?? "medium").toUpperCase()}] ${resolvedVuln.title} on ${resolvedVuln.contract_name ?? hostIp ?? "Protocol"}${resolvedVuln.confidence !== undefined ? ` conf:${resolvedVuln.confidence}` : ""}`)
+        const state = yield* Ref.get(stateRef)
+        if (state) {
+          const sevIcon: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🔵", gas: "⚪", info: "ℹ️" }
+          const targetName = resolvedVuln.contract_name ?? hostIp ?? "Protocol"
+          const findingLines = [
+            `## ${sevIcon[resolvedVuln.severity ?? "medium"] ?? "🟡"} [${(resolvedVuln.severity ?? "medium").toUpperCase()}] ${resolvedVuln.title}`,
+            `**Time**: ${new Date().toISOString()}`,
+            `**Contract / Target**: ${targetName}${resolvedVuln.function_name ? `::${resolvedVuln.function_name}()` : ""}${resolvedVuln.line_start ? ` (L${resolvedVuln.line_start}${resolvedVuln.line_end ? `-${resolvedVuln.line_end}` : ""})` : ""}`,
+            `**Bug Class**: \`${resolvedVuln.bug_class ?? "other"}\``,
+            `**Status**: ${resolvedVuln.status ?? "suspected"}${resolvedVuln.confidence !== undefined ? ` (confidence: ${(resolvedVuln.confidence * 100).toFixed(0)}%)` : ""}`,
+            ...(resolvedVuln.description ? [`**Description**: ${resolvedVuln.description}`] : []),
+            ...(resolvedVuln.impact ? [`**Impact**: ${resolvedVuln.impact}`] : []),
+            ...(resolvedVuln.root_cause ? [`**Root Cause**: ${resolvedVuln.root_cause}`] : []),
+            ...(resolvedVuln.evidence ? [`**Evidence**: \`${resolvedVuln.evidence}\``] : []),
+            ...(resolvedVuln.proof_of_concept ? [`**PoC**: \n\`\`\`solidity\n${resolvedVuln.proof_of_concept}\n\`\`\``] : []),
+            ...(resolvedVuln.minimal_fix ? [`**Fix**: \n\`\`\`diff\n${resolvedVuln.minimal_fix}\n\`\`\``] : []),
+            ...(resolvedVuln.evidence_items?.length ? [
+              `**Evidence Chain**:`,
+              ...resolvedVuln.evidence_items.map((e) =>
+                `- \`${e.tool}\`${e.source_agent ? ` (${e.source_agent})` : ""}: ${e.command ?? "(no command)"}${e.verification_status ? ` [${e.verification_status}]` : ""}`
+              ),
+            ] : []),
+            `---`,
+          ]
+          appendFinding(state.name, findingLines.join("\n"))
         }
         yield* persistCurrent
       }),
@@ -647,16 +667,33 @@ const layer = Layer.effect(
       updateVuln: Effect.fn("EngagementStore.updateVuln")(function* (hostIp, vulnId, patch) {
         const found = yield* Ref.modify(stateRef, (current) => {
           if (!current) return [false, current]
-          const host = current.hosts[hostIp]
-          if (!host) return [false, current]
-          const idx = host.vulns.findIndex((v) => v.id === vulnId)
-          if (idx === -1) return [false, current]
-          const updatedVulns = [...host.vulns]
-          updatedVulns[idx] = { ...updatedVulns[idx]!, ...patch }
-          return [true, { ...current, hosts: { ...current.hosts, [hostIp]: { ...host, vulns: updatedVulns } } }]
+          let updated = false
+          const nextVulns = current.vulns ? { ...current.vulns } : {}
+          const nextHosts = { ...current.hosts }
+
+          if (nextVulns[vulnId]) {
+            nextVulns[vulnId] = { ...nextVulns[vulnId]!, ...patch }
+            updated = true
+          }
+
+          for (const [ip, host] of Object.entries(nextHosts)) {
+            const idx = host.vulns.findIndex((v) => v.id === vulnId)
+            if (idx !== -1) {
+              const updatedHostVulns = [...host.vulns]
+              updatedHostVulns[idx] = { ...updatedHostVulns[idx]!, ...patch }
+              nextHosts[ip] = { ...host, vulns: updatedHostVulns }
+              updated = true
+              if (!nextVulns[vulnId]) {
+                nextVulns[vulnId] = updatedHostVulns[idx]!
+              }
+            }
+          }
+
+          if (!updated) return [false, current]
+          return [true, { ...current, vulns: nextVulns, hosts: nextHosts }]
         })
         if (found) {
-          yield* logChange("update_vuln", "vuln", vulnId, `Vuln ${vulnId} on ${hostIp} updated: ${Object.keys(patch).join(", ")}`)
+          yield* logChange("update_vuln", "vuln", vulnId, `Vuln ${vulnId} updated: ${Object.keys(patch).join(", ")}`)
           yield* persistCurrent
         }
         return found
@@ -665,17 +702,45 @@ const layer = Layer.effect(
       deleteVuln: Effect.fn("EngagementStore.deleteVuln")(function* (hostIp, vulnId) {
         const deleted = yield* Ref.modify(stateRef, (current) => {
           if (!current) return [false, current]
-          const host = current.hosts[hostIp]
-          if (!host) return [false, current]
-          const filtered = host.vulns.filter((v) => v.id !== vulnId)
-          if (filtered.length === host.vulns.length) return [false, current]
-          return [true, { ...current, hosts: { ...current.hosts, [hostIp]: { ...host, vulns: filtered } } }]
+          let removed = false
+          const nextVulns = current.vulns ? { ...current.vulns } : {}
+          const nextHosts = { ...current.hosts }
+
+          if (nextVulns[vulnId]) {
+            delete nextVulns[vulnId]
+            removed = true
+          }
+
+          for (const [ip, host] of Object.entries(nextHosts)) {
+            const filtered = host.vulns.filter((v) => v.id !== vulnId)
+            if (filtered.length !== host.vulns.length) {
+              nextHosts[ip] = { ...host, vulns: filtered }
+              removed = true
+            }
+          }
+
+          if (!removed) return [false, current]
+          return [true, { ...current, vulns: nextVulns, hosts: nextHosts }]
         })
         if (deleted) {
-          yield* logChange("delete_vuln", "vuln", vulnId, `Vuln ${vulnId} deleted from ${hostIp}`)
+          yield* logChange("delete_vuln", "vuln", vulnId, `Vuln ${vulnId} deleted`)
           yield* persistCurrent
         }
         return deleted
+      }),
+
+      getVulns: Effect.fn("EngagementStore.getVulns")(function* () {
+        const state = yield* Ref.get(stateRef)
+        if (!state) return {}
+        const result: Record<string, EngagementSchema.Vulnerability> = { ...(state.vulns ?? {}) }
+        for (const host of Object.values(state.hosts)) {
+          for (const v of host.vulns) {
+            if (v.id && !result[v.id]) {
+              result[v.id] = v
+            }
+          }
+        }
+        return result
       }),
 
       addCredential: Effect.fn("EngagementStore.addCredential")(function* (id, cred) {

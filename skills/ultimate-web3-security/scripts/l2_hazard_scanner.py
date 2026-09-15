@@ -89,7 +89,9 @@ def main():
 
     all_hazards = []
     for sol_file in target_path.rglob("*.sol"):
-        if any(x in sol_file.parts for x in ["test", "tests", "mocks", "mock", "lib", "node_modules"]):
+        if not sol_file.is_file():
+            continue
+        if any(x in sol_file.parts for x in ["test", "tests", "mocks", "mock", "lib", "node_modules", "out", "cache", "artifacts", "build"]):
             continue
         file_findings = scan_file(sol_file)
         if file_findings:

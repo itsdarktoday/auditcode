@@ -11,9 +11,12 @@ import subprocess
 import argparse
 from pathlib import Path
 
-def run_cmd(cmd, cwd=None):
-    res = subprocess.run(cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    return res.returncode, res.stdout, res.stderr
+def run_cmd(cmd, cwd=None, timeout=8):
+    try:
+        res = subprocess.run(cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout)
+        return res.returncode, res.stdout, res.stderr
+    except Exception:
+        return 1, "", "Timeout or execution failure"
 
 def extract_storage_layout(contract_name, cwd):
     code, out, _ = run_cmd(f"forge inspect {contract_name} storageLayout", cwd=cwd)

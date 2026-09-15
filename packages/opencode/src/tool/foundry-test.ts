@@ -1,7 +1,8 @@
 import { Effect, Schema } from "effect"
 import { EngagementStore } from "@auditcode/core/engagement/store"
+import { InstanceState } from "@/effect/instance-state"
 import DESCRIPTION from "./foundry-test.txt"
-import * as Tool from "./tool"
+import { Tool } from "./tool"
 import { spawnSync } from "node:child_process"
 
 export const Parameters = Schema.Struct({
@@ -46,16 +47,19 @@ export const FoundryTestTool = Tool.define(
           if (params.match_contract) args.push("--match-contract", params.match_contract)
           if (params.extra_args) args.push(...params.extra_args)
 
+          const cwd = yield* InstanceState.directory.pipe(Effect.orElseSucceed(() => process.cwd()))
           try {
             const res = spawnSync("forge", args, {
+              cwd,
               encoding: "utf-8",
               maxBuffer: 20 * 1024 * 1024,
+              timeout: 120000,
             })
 
             const stdout = res.stdout ?? ""
             const stderr = res.stderr ?? ""
             const output = (stdout + "\n" + stderr).trim()
-            const passed = output.includes("[PASS]") && !output.includes("[FAIL]")
+            const passed = (res.status === 0 || output.includes("[PASS]")) && !output.includes("[FAIL]")
 
             const pocId = `POC-${params.match_test ?? params.match_contract ?? "test"}`
             yield* store.addPoCTest({
@@ -69,17 +73,14 @@ export const FoundryTestTool = Tool.define(
             })
 
             if (params.target_vuln_id && passed) {
-              const state = yield* store.get()
-              if (state) {
-                const vuln = state.vulns?.[params.target_vuln_id]
-                if (vuln) {
-                  yield* store.updateVuln(vuln.contract_name ?? "contract", params.target_vuln_id, {
-                    status: "poc_verified",
-                    confidence: 0.99,
-                    proof_of_concept: output.slice(0, 3000),
-                  })
-                }
-              }
+              const allVulns = yield* store.getVulns()
+              const vuln = allVulns[params.target_vuln_id]
+              const targetName = vuln?.contract_name ?? "Protocol"
+              yield* store.updateVuln(targetName, params.target_vuln_id, {
+                status: "poc_verified",
+                confidence: 0.99,
+                proof_of_concept: output.slice(0, 3000),
+              })
             }
 
             const header = passed ? "⚡ Foundry Test: PASSED (PoC Exploit Succeeded)" : "Foundry Test: FAILED"

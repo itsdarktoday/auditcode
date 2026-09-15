@@ -76,7 +76,7 @@ const NO_ENGAGEMENT = "No engagement loaded. Use create_engagement or load_engag
 function countsLine(state: EngagementSchema.State): string {
   const s = EngagementSchema.summary(state)
   const objStr = s.objectives_total > 0 ? ` obj:${s.objectives_completed}/${s.objectives_total}` : ""
-  return `[${state.name}] phase:${s.current_phase} hosts:${s.hosts_discovered} vulns:${s.vulnerabilities} creds:${s.credentials} flags:${s.flags}${objStr}`
+  return `[${state.name}] phase:${s.current_phase} contracts:${s.contracts_count} vulns:${s.vulnerabilities_total} (crit:${s.critical} high:${s.high} med:${s.medium}) invariants:${s.invariants_total} pocs:${s.pocs_total}${objStr}`
 }
 
 export const StateUpdateTool = Tool.define(
@@ -204,6 +204,17 @@ export const StateUpdateTool = Tool.define(
             }
           }
 
+          case "update_actor_role": {
+            const role_name = d.role_name as string
+            if (!role_name) return { title: "Error", metadata: {}, output: "Error: data.role_name is required for update_actor_role." }
+            const ok = yield* store.updateActorRole(role_name, d)
+            return {
+              title: `Updated Role ${role_name}`,
+              metadata: { role_name },
+              output: ok ? `Actor Role "${role_name}" updated.` : `Actor Role "${role_name}" not found.`,
+            }
+          }
+
           case "add_poc": {
             const id = d.id as string ?? `POC-${Date.now().toString().slice(-4)}`
             const name = d.name as string ?? id
@@ -223,6 +234,17 @@ export const StateUpdateTool = Tool.define(
               title: `Added PoC ${name}`,
               metadata: { id },
               output: `PoC test "${name}" recorded (${poc.status}).`,
+            }
+          }
+
+          case "update_poc": {
+            const id = (d.id ?? d.poc_id) as string
+            if (!id) return { title: "Error", metadata: {}, output: "Error: data.id is required for update_poc." }
+            const ok = yield* store.updatePoCTest(id, d)
+            return {
+              title: `Updated PoC ${id}`,
+              metadata: { id },
+              output: ok ? `PoC test "${id}" updated.` : `PoC test "${id}" not found.`,
             }
           }
 
@@ -365,52 +387,63 @@ export const StateUpdateTool = Tool.define(
             case "add_vuln": {
               const state = yield* store.get()
               if (!state) return { title: "Error", metadata: {}, output: NO_ENGAGEMENT }
-              const hostIp = d.host_ip as string
+              const contractName = (d.contract_name ?? d.contract ?? d.target ?? d.host_ip ?? "Protocol") as string
               const title = d.title as string
-              if (!hostIp || !title) {
-                return { title: "Error", metadata: {}, output: "Error: data.host_ip and data.title are required for add_vuln." }
+              if (!title) {
+                return { title: "Error", metadata: {}, output: "Error: data.title is required for add_vuln." }
               }
-              if (!state.hosts[hostIp]) {
-                return { title: "Error", metadata: {}, output: `Error: Host ${hostIp} not found. Add the host first.` }
-              }
-              const vuln = {
-                id: d.id || `vuln-${Date.now()}`,
+              const vulnId = (d.id as string) || `AC-${Date.now().toString(36).toUpperCase()}`
+              const vuln: EngagementSchema.Vulnerability = {
+                id: vulnId,
                 title,
+                contract_name: contractName,
+                function_name: d.function_name,
+                line_start: d.line_start,
+                line_end: d.line_end,
                 severity: d.severity || "medium",
+                bug_class: d.bug_class || "other",
                 status: d.status || "suspected",
                 confidence: d.confidence as number | undefined,
                 description: d.description || "",
+                impact: d.impact || "",
+                root_cause: d.root_cause || "",
+                attack_path: d.attack_path || "",
+                proof_of_concept: d.proof_of_concept || "",
+                minimal_fix: d.minimal_fix || "",
                 evidence: d.evidence || "",
                 evidence_items: d.evidence_items as EngagementSchema.EvidenceItem[] | undefined,
                 service_port: d.service_port,
                 references: d.references || [],
+                swc_id: d.swc_id,
+                cwe_id: d.cwe_id,
+                discovered_by: d.discovered_by,
                 mitre_attack_id: d.mitre_attack_id,
-              } as EngagementSchema.Vulnerability
-              yield* store.addVuln(hostIp, vuln)
+              }
+              yield* store.addVuln(contractName, vuln)
               const updated = yield* store.get()
 
               yield* events.publish(PentestEvent.VulnFound, {
                 timestamp: Date.now(),
                 engagementID: state.id,
-                hostIp,
+                hostIp: contractName,
                 title,
                 severity: vuln.severity ?? "medium",
                 status: vuln.status ?? "suspected",
               })
               return {
                 title: `Vuln: ${title}`,
-                metadata: { host_ip: hostIp, severity: vuln.severity },
-                output: `Vulnerability added to ${hostIp}: [${(vuln.severity ?? "medium").toUpperCase()}] ${title} (${vuln.status ?? "suspected"})${updated ? `\n${countsLine(updated)}` : ""}`,
+                metadata: { contract_name: contractName, severity: vuln.severity, id: vulnId },
+                output: `Vulnerability recorded for ${contractName}: [${(vuln.severity ?? "medium").toUpperCase()}] ${title} (${vuln.status ?? "suspected"})${updated ? `\n${countsLine(updated)}` : ""}`,
               }
             }
 
             case "update_vuln": {
               const state = yield* store.get()
               if (!state) return { title: "Error", metadata: {}, output: NO_ENGAGEMENT }
-              const hostIp = d.host_ip as string
-              const vulnId = d.vuln_id as string
-              if (!hostIp || !vulnId) {
-                return { title: "Error", metadata: {}, output: "Error: data.host_ip and data.vuln_id are required for update_vuln." }
+              const vulnId = (d.vuln_id ?? d.id) as string
+              const target = (d.contract_name ?? d.contract ?? d.host_ip ?? "") as string
+              if (!vulnId) {
+                return { title: "Error", metadata: {}, output: "Error: data.vuln_id (or data.id) is required for update_vuln." }
               }
               const patch: Record<string, unknown> = {}
               if (d.status !== undefined) patch.status = d.status
@@ -420,38 +453,48 @@ export const StateUpdateTool = Tool.define(
               if (d.evidence_items !== undefined) patch.evidence_items = d.evidence_items
               if (d.description !== undefined) patch.description = d.description
               if (d.title !== undefined) patch.title = d.title
-              const ok = yield* store.updateVuln(hostIp, vulnId, patch as Partial<{ -readonly [K in keyof EngagementSchema.Vulnerability]: EngagementSchema.Vulnerability[K] }>)
+              if (d.impact !== undefined) patch.impact = d.impact
+              if (d.root_cause !== undefined) patch.root_cause = d.root_cause
+              if (d.attack_path !== undefined) patch.attack_path = d.attack_path
+              if (d.proof_of_concept !== undefined) patch.proof_of_concept = d.proof_of_concept
+              if (d.minimal_fix !== undefined) patch.minimal_fix = d.minimal_fix
+              if (d.line_start !== undefined) patch.line_start = d.line_start
+              if (d.line_end !== undefined) patch.line_end = d.line_end
+              if (d.function_name !== undefined) patch.function_name = d.function_name
+              if (d.bug_class !== undefined) patch.bug_class = d.bug_class
+              if (d.critic_review !== undefined) patch.critic_review = d.critic_review
+              const ok = yield* store.updateVuln(target, vulnId, patch as Partial<{ -readonly [K in keyof EngagementSchema.Vulnerability]: EngagementSchema.Vulnerability[K] }>)
               if (!ok) {
-                return { title: "Error", metadata: {}, output: `Vuln "${vulnId}" not found on host ${hostIp}.` }
+                return { title: "Error", metadata: {}, output: `Vuln "${vulnId}" not found in audit state.` }
               }
               const updated = yield* store.get()
 
               const changedFields = Object.keys(patch).join(", ")
               return {
                 title: `Vuln updated: ${vulnId}`,
-                metadata: { host_ip: hostIp, vuln_id: vulnId },
-                output: `Vulnerability "${vulnId}" on ${hostIp} updated (${changedFields}).${updated ? `\n${countsLine(updated)}` : ""}`,
+                metadata: { target, vuln_id: vulnId },
+                output: `Vulnerability "${vulnId}" updated (${changedFields}).${updated ? `\n${countsLine(updated)}` : ""}`,
               }
             }
 
             case "delete_vuln": {
               const state = yield* store.get()
               if (!state) return { title: "Error", metadata: {}, output: NO_ENGAGEMENT }
-              const hostIp = d.host_ip as string
-              const vulnId = d.vuln_id as string
-              if (!hostIp || !vulnId) {
-                return { title: "Error", metadata: {}, output: "Error: data.host_ip and data.vuln_id are required for delete_vuln." }
+              const vulnId = (d.vuln_id ?? d.id) as string
+              const target = (d.contract_name ?? d.host_ip ?? "") as string
+              if (!vulnId) {
+                return { title: "Error", metadata: {}, output: "Error: data.vuln_id (or data.id) is required for delete_vuln." }
               }
-              const deleted = yield* store.deleteVuln(hostIp, vulnId)
+              const deleted = yield* store.deleteVuln(target, vulnId)
               if (!deleted) {
-                return { title: "Error", metadata: {}, output: `Vuln "${vulnId}" not found on host ${hostIp}.` }
+                return { title: "Error", metadata: {}, output: `Vuln "${vulnId}" not found in audit state.` }
               }
               const updated = yield* store.get()
 
               return {
                 title: `Vuln deleted: ${vulnId}`,
-                metadata: { host_ip: hostIp, vuln_id: vulnId },
-                output: `Vulnerability "${vulnId}" deleted from ${hostIp}.${updated ? `\n${countsLine(updated)}` : ""}`,
+                metadata: { vuln_id: vulnId },
+                output: `Vulnerability "${vulnId}" deleted.${updated ? `\n${countsLine(updated)}` : ""}`,
               }
             }
 

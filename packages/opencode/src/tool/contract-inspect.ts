@@ -69,8 +69,13 @@ export const ContractInspectTool = Tool.define(
               proxyPattern = "minimal_proxy"
             }
 
+            // Clean comments while preserving line breaks so line numbers match
+            const cleanContent = content
+              .replace(/\/\*[\s\S]*?\*\//g, (m) => "\n".repeat(m.split("\n").length - 1))
+              .replace(/\/\/[^\n]*/g, "")
+
             const functions: EngagementSchema.FunctionInfo[] = []
-            const funcMatches = [...content.matchAll(/function\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*([^{;]*)(?:\{|;)/g)]
+            const funcMatches = [...cleanContent.matchAll(/function\s+([A-Za-z0-9_]+)\s*\(([\s\S]*?)\)\s*([^{;]*)(?:\{|;)/g)]
             for (const fMatch of funcMatches) {
               const fnName = fMatch[1]
               const paramsStr = fMatch[2]
@@ -105,41 +110,66 @@ export const ContractInspectTool = Tool.define(
                 .split(/\s+/)
                 .filter((q) => q && !["public", "external", "internal", "private", "view", "pure", "payable", "virtual", "override", "returns"].includes(q))
 
+              const lineStart = fMatch.index !== undefined
+                ? cleanContent.slice(0, fMatch.index).split("\n").length
+                : undefined
+
               functions.push({
                 name: fnName,
                 visibility,
                 mutability,
                 modifiers: modifiers.length > 0 ? modifiers : undefined,
-                parameters: paramsStr ? paramsStr.split(",").map((p) => p.trim()) : [],
+                parameters: paramsStr ? paramsStr.split(",").map((p) => p.trim()).filter(Boolean) : [],
                 is_payable: isPayable,
+                line_start: lineStart,
               })
             }
 
             const modifiers: EngagementSchema.ModifierInfo[] = []
-            const modMatches = [...content.matchAll(/modifier\s+([A-Za-z0-9_]+)\s*(?:\(([^)]*)\))?\s*\{/g)]
+            const modMatches = [...cleanContent.matchAll(/modifier\s+([A-Za-z0-9_]+)\s*(?:\(([\s\S]*?)\))?\s*\{/g)]
             for (const m of modMatches) {
               modifiers.push({
                 name: m[1],
-                parameters: m[2] ? m[2].split(",").map((p) => p.trim()) : [],
+                parameters: m[2] ? m[2].split(",").map((p) => p.trim()).filter(Boolean) : [],
               })
             }
 
             const events: EngagementSchema.EventInfo[] = []
-            const eventMatches = [...content.matchAll(/event\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*;/g)]
+            const eventMatches = [...cleanContent.matchAll(/event\s+([A-Za-z0-9_]+)\s*\(([\s\S]*?)\)\s*;/g)]
             for (const e of eventMatches) {
               events.push({
                 name: e[1],
-                parameters: e[2] ? e[2].split(",").map((p) => p.trim()) : [],
+                parameters: e[2] ? e[2].split(",").map((p) => p.trim()).filter(Boolean) : [],
               })
             }
 
             const customErrors: EngagementSchema.CustomErrorInfo[] = []
-            const errorMatches = [...content.matchAll(/error\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*;/g)]
+            const errorMatches = [...cleanContent.matchAll(/error\s+([A-Za-z0-9_]+)\s*\(([\s\S]*?)\)\s*;/g)]
             for (const err of errorMatches) {
               customErrors.push({
                 name: err[1],
-                parameters: err[2] ? err[2].split(",").map((p) => p.trim()) : [],
+                parameters: err[2] ? err[2].split(",").map((p) => p.trim()).filter(Boolean) : [],
               })
+            }
+
+            const stateVariables: EngagementSchema.StateVariable[] = []
+            const varMatches = [...cleanContent.matchAll(/(?:mapping\s*\([^;]+\)|[A-Za-z0-9_\[\]]+)\s+(?:(public|internal|private)\s+)?(?:(constant|immutable)\s+)?([A-Za-z0-9_]+)\s*(?:=|;)/g)]
+            for (const vm of varMatches) {
+              const fullType = vm[0].split(/\s+/)[0]?.trim() ?? "unknown"
+              const visibility = vm[1] ?? "internal"
+              const isConst = vm[2] === "constant"
+              const isImmutable = vm[2] === "immutable"
+              const varName = vm[3]
+              const reserved = ["function", "modifier", "event", "error", "struct", "enum", "contract", "library", "interface", "return", "returns", "require", "revert"]
+              if (varName && !reserved.includes(varName)) {
+                stateVariables.push({
+                  name: varName,
+                  type: fullType,
+                  visibility,
+                  is_constant: isConst,
+                  is_immutable: isImmutable,
+                })
+              }
             }
 
             const contractInfo: EngagementSchema.ContractInfo = {
@@ -153,6 +183,7 @@ export const ContractInspectTool = Tool.define(
               modifiers,
               events,
               custom_errors: customErrors,
+              state_variables: stateVariables.length > 0 ? stateVariables : undefined,
             }
 
             discoveredContracts.push(contractInfo)

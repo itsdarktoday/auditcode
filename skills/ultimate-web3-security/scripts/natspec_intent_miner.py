@@ -68,7 +68,9 @@ def main():
 
     all_contradictions = []
     for sol_file in target_path.rglob("*.sol"):
-        if any(x in sol_file.parts for x in ["test", "tests", "mocks", "mock", "lib", "node_modules"]):
+        if not sol_file.is_file():
+            continue
+        if any(x in sol_file.parts for x in ["test", "tests", "mocks", "mock", "lib", "node_modules", "out", "cache", "artifacts", "build"]):
             continue
         findings = analyze_natspec_contradictions(sol_file)
         if findings:

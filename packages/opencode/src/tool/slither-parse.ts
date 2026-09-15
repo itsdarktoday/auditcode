@@ -2,9 +2,11 @@ import { Effect, Schema } from "effect"
 import { EngagementStore } from "@auditcode/core/engagement/store"
 import { EngagementSchema } from "@auditcode/core/engagement/schema"
 import { FSUtil } from "@auditcode/core/fs-util"
+import { InstanceState } from "@/effect/instance-state"
 import DESCRIPTION from "./slither-parse.txt"
-import * as Tool from "./tool"
+import { Tool } from "./tool"
 import { spawnSync } from "node:child_process"
+import path from "node:path"
 
 export const Parameters = Schema.Struct({
   file_path: Schema.optional(Schema.String).annotate({
@@ -32,21 +34,34 @@ export const SlitherParseTool = Tool.define(
         _ctx: Tool.Context,
       ): Effect.Effect<Tool.ExecuteResult> =>
         Effect.gen(function* () {
+          const cwd = yield* InstanceState.directory.pipe(Effect.orElseSucceed(() => process.cwd()))
           let jsonStr = params.raw_json
 
           if (!jsonStr && params.file_path) {
-            const exists = yield* fs.existsSafe(params.file_path).pipe(Effect.orDie)
+            const resolvedPath = path.isAbsolute(params.file_path)
+              ? params.file_path
+              : path.join(cwd, params.file_path)
+            const exists = yield* fs.existsSafe(resolvedPath).pipe(Effect.orDie)
             if (exists) {
-              jsonStr = yield* fs.readFileString(params.file_path).pipe(Effect.orDie)
+              jsonStr = yield* fs.readFileString(resolvedPath).pipe(Effect.orDie)
             }
           }
 
           if (!jsonStr && params.target_path) {
             try {
               const res = spawnSync("slither", [params.target_path, "--json", "-"], {
+                cwd,
                 encoding: "utf-8",
                 maxBuffer: 20 * 1024 * 1024,
+                timeout: 120000,
               })
+              if (res.error) {
+                return {
+                  title: "Slither Error",
+                  metadata: {},
+                  output: `Failed to execute slither: ${res.error.message}`,
+                }
+              }
               jsonStr = res.stdout
             } catch (e) {
               return {

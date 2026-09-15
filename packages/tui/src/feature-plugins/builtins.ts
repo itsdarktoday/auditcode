@@ -1,6 +1,7 @@
 import type { TuiPlugin, TuiPluginModule } from "@auditcode/plugin/tui"
 import HomeFooter from "./home/footer"
 import HomeTips from "./home/tips"
+import SidebarAudit from "./sidebar/audit"
 import SidebarContext from "./sidebar/context"
 import SidebarFiles from "./sidebar/files"
 import SidebarFooter from "./sidebar/footer"
@@ -20,6 +21,7 @@ export type BuiltinTuiPlugin = Omit<TuiPluginModule, "id"> & {
 
 export function createBuiltinPlugins(options: { experimentalEventSystem: boolean }): BuiltinTuiPlugin[] {
   return [
+    SidebarAudit,
     HomeFooter,
     HomeTips,
     SidebarContext,

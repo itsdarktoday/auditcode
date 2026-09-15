@@ -119,7 +119,7 @@ export function deriveConfidence(vuln: {
   proof_of_concept?: string
   critic_review?: { verdict?: string }
 }): number {
-  if (vuln.status === "poc_verified" || vuln.status === "exploited") return 0.99
+  if (vuln.status === "poc_verified" || vuln.status === "exploited") return 0.95
   const items = vuln.evidence_items ?? []
   if (items.some((e) => e.verification_status === "verified" || e.verification_status === "poc_passed")) return 0.95
   if (items.length > 0 && items.every((e) => e.verification_status === "false_positive")) return 0.1
@@ -133,7 +133,7 @@ export function deriveConfidence(vuln: {
   if (vuln.proof_of_concept && vuln.proof_of_concept.length > 30) c += 0.2
   if (vuln.status === "confirmed") c += 0.15
   else if (vuln.status === "lead" || vuln.status === "suspected") c -= 0.1
-  return Math.round(Math.max(0.1, Math.min(0.99, c)) * 100) / 100
+  return Math.round(Math.max(0.1, Math.min(0.95, c)) * 100) / 100
 }
 
 export const Vulnerability = Schema.Struct({
@@ -672,7 +672,7 @@ export function wordlistSummary(usages: readonly WordlistUsage[], hostIp?: strin
 
 export function toVectorLedger(state: State, recentChanges: ChangelogEntry[] = []): string | undefined {
   const contracts = Object.entries(state.contracts ?? {})
-  const hosts = Object.entries(state.hosts)
+  const hosts = Object.entries(state.hosts ?? {})
   if (contracts.length === 0 && hosts.length === 0) return undefined
 
   const lines: string[] = [
@@ -700,10 +700,36 @@ export function toVectorLedger(state: State, recentChanges: ChangelogEntry[] = [
     if (allVulns.length > 15) lines.push(`    … +${allVulns.length - 15} more findings (state_query vulns)`)
   }
 
+  // Host-level audit tracking
+  if (hosts.length > 0) {
+    for (const [ip, host] of hosts) {
+      const highestAccess = host.access.find((a) => a.level === "root" || a.level === "system") ?? host.access[0]
+      const statusLabel = highestAccess ? `OWNED-${highestAccess.level ?? highestAccess.username ?? "user"}` : "PROBING"
+      const touched = recentChanges.some((c) => c.entity_id === ip || (c.summary && c.summary.includes(ip)))
+      const signal = touched ? " ⚡signal" : ""
+      lines.push(`  ${ip} [${statusLabel}]${signal}`)
+
+      for (const v of host.vulns) {
+        if (v.status === "confirmed") {
+          lines.push(`    ! confirmed — ${v.title}`)
+        } else if (v.status === "suspected" || v.status === "lead") {
+          lines.push(`    ? suspected — ${v.title}`)
+        }
+      }
+
+      if (host.access.length === 0 && host.services.length > 0) {
+        const openSvcs = host.services.filter((s) => s.state === "open" || !s.state).map((s) => `${s.port}/${s.service ?? "unknown"}`)
+        if (openSvcs.length > 0) {
+          lines.push(`    · untried: ${openSvcs.join(", ")}`)
+        }
+      }
+    }
+  }
+
   const dead = (state.resolved_vectors ?? []).filter((v) => v.status === "resolved")
   if (dead.length) {
     lines.push(
-      `  RESOLVED — dead ends (do NOT repeat): ${dead.slice(0, 8).map((v) => `${v.target}::${v.vector}`).join(" | ")}`,
+      `  DEAD: ${dead.slice(0, 8).map((v) => `${v.target}::${v.vector}`).join(" | ")}`,
     )
   }
   lines.push("</vector-ledger>")
@@ -879,6 +905,17 @@ export function toResolvedVectorsContext(state: State, max = 30): string | undef
           ? ` — ${clip(v.evidence)}`
           : ""
     lines.push(`  [${v.status.toUpperCase()}] ${v.target} :: ${v.vector}${n}${why}`)
+    if (v.status !== "resolved" && v.attempt_log?.length) {
+      for (const a of v.attempt_log) {
+        if (a.outcome === "failed") {
+          lines.push(`    ↳ dead end: ${a.technique} (don't repeat: ${clip(a.detail ?? "failed")})`)
+        }
+      }
+    }
+  }
+  const overflow = all.length - shown.length
+  if (overflow > 0) {
+    lines.push(`  (+${overflow} more)`)
   }
   lines.push("</resolved-vectors>")
   return lines.join("\n")

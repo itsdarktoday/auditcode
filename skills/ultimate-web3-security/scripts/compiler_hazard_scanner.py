@@ -41,7 +41,9 @@ def scan_compiler_hazards(target_dir):
 
     # 1. Scan Solc pragmas in source files
     for sol_file in target_path.rglob("*.sol"):
-        if any(x in sol_file.parts for x in ["test", "tests", "mocks", "mock", "lib", "node_modules"]):
+        if not sol_file.is_file():
+            continue
+        if any(x in sol_file.parts for x in ["test", "tests", "mocks", "mock", "lib", "node_modules", "out", "cache", "artifacts", "build"]):
             continue
         with open(sol_file, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()

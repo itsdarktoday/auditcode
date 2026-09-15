@@ -150,16 +150,114 @@ export const StateQueryTool = Tool.define(
               const lines = [
                 `Engagement: ${state.name} (${state.id})`,
                 `Phase: ${s.current_phase} | Mode: ${s.mode}`,
-                `Hosts: ${s.hosts_discovered} discovered, ${s.hosts_compromised} compromised`,
-                `Vulnerabilities: ${s.vulnerabilities}`,
-                `Credentials: ${s.credentials}`,
-                `Flags: ${s.flags}`,
-                `Attack steps: ${s.attack_steps}`,
-                `Unchecked services: ${s.unchecked_services}`,
+                `Contracts in Scope: ${s.contracts_count}`,
+                `Vulnerabilities: ${s.vulnerabilities_total} (🔴 Critical: ${s.critical}, 🟠 High: ${s.high}, 🟡 Medium: ${s.medium}, 🔵 Low: ${s.low}, ⚪ Gas: ${s.gas}, ℹ️ Info: ${s.info})`,
+                `Protocol Invariants: ${s.invariants_total}`,
+                `Verified PoC Tests: ${s.pocs_total}`,
+                `Framework: ${state.scope.framework ?? "auto-detected"}`,
                 `Scope: ${state.scope.targets.length} targets, ${state.scope.excludes.length} excludes`,
-                `Objectives: ${s.objectives_completed}/${s.objectives_total} completed`,
+                ...(s.objectives_total > 0 ? [`Objectives: ${s.objectives_completed}/${s.objectives_total} completed`] : []),
               ]
               return { title: "Summary", metadata: s, output: lines.join("\n") }
+            }
+
+            case "contracts": {
+              const contracts = Object.values(state.contracts ?? {})
+              if (contracts.length === 0) {
+                return { title: "Contracts", metadata: { count: 0 }, output: "No smart contracts registered in audit state yet. Run contract_inspect to discover and register contracts." }
+              }
+              const lines = [
+                `In-Scope Contracts (${contracts.length}):`,
+                "",
+                "| Contract | Path | SLOC | Proxy | Compiler | Functions |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- |",
+                ...contracts.map((c) => `| **${c.name}** | \`${c.path}\` | ${c.sloc ?? "?"} | \`${c.proxy_pattern ?? "none"}\` | \`${c.compiler_version ?? "solc"}\` | ${c.functions?.length ?? 0} |`),
+              ]
+              return { title: "Contracts", metadata: { count: contracts.length }, output: lines.join("\n") }
+            }
+
+            case "contract": {
+              if (!params.filter) {
+                return { title: "Contract", metadata: {}, output: "Error: filter parameter required (set to contract name, e.g. 'Vault')." }
+              }
+              const c = state.contracts?.[params.filter]
+              if (!c) {
+                const available = Object.keys(state.contracts ?? {})
+                return {
+                  title: "Contract Not Found",
+                  metadata: {},
+                  output: `Contract "${params.filter}" not found.${available.length > 0 ? ` Registered: ${available.join(", ")}` : ""}`,
+                }
+              }
+              const lines = [
+                `Contract: ${c.name} (\`${c.path}\`)`,
+                `SLOC: ${c.sloc ?? "?"} | Proxy Pattern: ${c.proxy_pattern ?? "none"} | Compiler: ${c.compiler_version ?? "solc"}`,
+                ...(c.inheritance?.length ? [`Inheritance: ${c.inheritance.join(", ")}`] : []),
+                ...(c.interfaces_implemented?.length ? [`Interfaces: ${c.interfaces_implemented.join(", ")}`] : []),
+                "",
+                `Functions (${c.functions?.length ?? 0}):`,
+                ...(c.functions?.length ? c.functions.map((f) => `  - [${(f.visibility ?? "public").toUpperCase()}] ${f.name}(${(f.parameters ?? []).join(", ")}) ${f.mutability ?? ""}${f.modifiers?.length ? ` [${f.modifiers.join(", ")}]` : ""}`) : ["  (none recorded)"]),
+                "",
+                `Modifiers (${c.modifiers?.length ?? 0}):`,
+                ...(c.modifiers?.length ? c.modifiers.map((m) => `  - ${m.name}(${(m.parameters ?? []).join(", ")})`) : ["  (none recorded)"]),
+                "",
+                `Events (${c.events?.length ?? 0}):`,
+                ...(c.events?.length ? c.events.map((e) => `  - ${e.name}(${(e.parameters ?? []).join(", ")})`) : ["  (none recorded)"]),
+                "",
+                `Custom Errors (${c.custom_errors?.length ?? 0}):`,
+                ...(c.custom_errors?.length ? c.custom_errors.map((err) => `  - ${err.name}(${(err.parameters ?? []).join(", ")})`) : ["  (none recorded)"]),
+                "",
+                `State Variables (${c.state_variables?.length ?? 0}):`,
+                ...(c.state_variables?.length ? c.state_variables.map((sv) => `  - ${sv.type} ${sv.name}${sv.slot !== undefined ? ` (Slot: ${sv.slot}, Offset: ${sv.offset ?? 0})` : ""}`) : ["  (none recorded)"]),
+              ]
+              return { title: `Contract: ${c.name}`, metadata: { name: c.name }, output: lines.join("\n") }
+            }
+
+            case "invariants": {
+              const invariants = Object.values(state.invariants ?? {})
+              if (invariants.length === 0) {
+                return { title: "Invariants", metadata: { count: 0 }, output: "No protocol invariants formalized yet. Add with state_update (action: add_invariant)." }
+              }
+              const statusIcons: Record<string, string> = { valid: "🟢 VALID", violated: "🔴 VIOLATED", untested: "⚪ UNTESTED", fuzzed: "🔵 FUZZED" }
+              const lines = [
+                `Protocol Invariants (${invariants.length}):`,
+                "",
+                "| ID | Title | Status | Targets | Fuzz Property |",
+                "| :--- | :--- | :--- | :--- | :--- |",
+                ...invariants.map((inv) => `| **${inv.id}** | ${inv.title} | ${statusIcons[inv.status ?? "untested"] ?? "⚪ UNTESTED"} | ${(inv.target_contracts ?? []).join(", ") || "Protocol"} | ${inv.fuzz_property ? `\`${inv.fuzz_property}\`` : "None"} |`),
+              ]
+              return { title: "Invariants", metadata: { count: invariants.length }, output: lines.join("\n") }
+            }
+
+            case "actors": {
+              const actors = Object.values(state.actors ?? {})
+              if (actors.length === 0) {
+                return { title: "Actor Roles", metadata: { count: 0 }, output: "No actor roles recorded in access control matrix yet. Add with state_update (action: add_actor_role)." }
+              }
+              const lines = [
+                `Access Control & Actor Roles (${actors.length}):`,
+                "",
+                "| Role | Description | Privileged Functions | Timelock | Multisig |",
+                "| :--- | :--- | :--- | :--- | :--- |",
+                ...actors.map((a) => `| **${a.role_name}** | ${a.description ?? ""} | ${(a.privileged_functions ?? []).join(", ") || "None"} | ${a.timelock_delay ?? "None"} | ${a.multisig_threshold ?? "None"} |`),
+              ]
+              return { title: "Actor Roles", metadata: { count: actors.length }, output: lines.join("\n") }
+            }
+
+            case "pocs": {
+              const pocs = Object.values(state.pocs ?? {})
+              if (pocs.length === 0) {
+                return { title: "PoC Tests", metadata: { count: 0 }, output: "No Proof-of-Concept tests recorded yet. Run tests with foundry_test or record with state_update (action: add_poc)." }
+              }
+              const statusIcons: Record<string, string> = { passed: "⚡ PASSED", failed: "❌ FAILED", pending: "⏳ PENDING", error: "⚠️ ERROR" }
+              const lines = [
+                `Proof-of-Concept Tests (${pocs.length}):`,
+                "",
+                "| ID | Name | Target Vuln | Status | Command | Gas Used |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- |",
+                ...pocs.map((p) => `| **${p.id}** | ${p.name} | ${p.target_vuln_id ? `\`${p.target_vuln_id}\`` : "None"} | ${statusIcons[p.status ?? "pending"] ?? p.status} | \`${p.command ?? "forge test"}\` | ${p.gas_used ?? "?"} |`),
+              ]
+              return { title: "PoC Tests", metadata: { count: pocs.length }, output: lines.join("\n") }
             }
 
             case "hosts": {
@@ -172,33 +270,46 @@ export const StateQueryTool = Tool.define(
             }
 
             case "vulns": {
-              const allVulns: { ip: string; vuln: EngagementSchema.Vulnerability }[] = []
-              for (const [ip, host] of Object.entries(state.hosts)) {
-                for (const vuln of host.vulns) {
-                  allVulns.push({ ip, vuln })
+              const vulnMap = new Map<string, EngagementSchema.Vulnerability>()
+              for (const [id, v] of Object.entries(state.vulns ?? {})) {
+                vulnMap.set(id, v)
+              }
+              for (const host of Object.values(state.hosts)) {
+                for (const v of host.vulns) {
+                  const key = v.id || v.title
+                  if (!vulnMap.has(key)) {
+                    vulnMap.set(key, v)
+                  }
                 }
               }
+              const allVulns = [...vulnMap.values()]
               if (allVulns.length === 0) {
                 return { title: "Vulnerabilities", metadata: { count: 0 }, output: "No vulnerabilities recorded yet." }
               }
               const filtered = params.filter
-                ? allVulns.filter((v) => v.vuln.severity === params.filter)
+                ? allVulns.filter((v) => v.severity === params.filter || v.contract_name === params.filter || v.status === params.filter)
                 : allVulns
-              // Sort by severity
-              const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
-              filtered.sort((a, b) => (order[a.vuln.severity ?? "medium"] ?? 5) - (order[b.vuln.severity ?? "medium"] ?? 5))
+              const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, gas: 4, info: 5 }
+              filtered.sort((a, b) => (order[a.severity ?? "medium"] ?? 6) - (order[b.severity ?? "medium"] ?? 6))
+              const sevIcons: Record<string, string> = { critical: "🔴", high: "🟠", medium: "🟡", low: "🔵", gas: "⚪", info: "ℹ️" }
               const lines = filtered.map((v) => {
-                const sev = v.vuln.severity ?? "medium"
-                const port = v.vuln.service_port ? `:${v.vuln.service_port}` : ""
-                const conf = v.vuln.confidence !== undefined ? ` conf:${v.vuln.confidence}` : ""
-                const refs = (v.vuln.references ?? []).length > 0 ? ` refs:[${(v.vuln.references ?? []).join(",")}]` : ""
-                return `[${sev.toUpperCase()}] ${v.ip}${port} -- ${v.vuln.title} (${v.vuln.status ?? "suspected"})${conf}${refs}${v.vuln.description ? `\n  ${v.vuln.description}` : ""}`
+                const sev = v.severity ?? "medium"
+                const icon = sevIcons[sev] ?? "🟡"
+                const target = v.contract_name ? `${v.contract_name}${v.function_name ? `::${v.function_name}()` : ""}` : "Protocol"
+                const linesRange = v.line_start ? ` (L${v.line_start}${v.line_end ? `-${v.line_end}` : ""})` : ""
+                const conf = v.confidence !== undefined ? ` [${(v.confidence * 100).toFixed(0)}% conf]` : ""
+                const poc = v.proof_of_concept ? " [PoC Verified]" : ""
+                const bugClass = v.bug_class ? ` [${v.bug_class}]` : ""
+                const header = `${icon} [${sev.toUpperCase()}] ${v.id ?? "AC"}: ${v.title}`
+                const sub = `  Target: ${target}${linesRange} | Status: ${v.status ?? "suspected"}${bugClass}${conf}${poc}`
+                const desc = v.description ? `\n  Description: ${v.description.slice(0, 200)}${v.description.length > 200 ? "..." : ""}` : ""
+                return `${header}\n${sub}${desc}`
               })
               const label = params.filter ? `Vulnerabilities [${params.filter}]` : "Vulnerabilities"
               return {
                 title: label,
                 metadata: { count: filtered.length, total: allVulns.length },
-                output: `${label} (${filtered.length}${params.filter ? ` of ${allVulns.length} total` : ""}):\n\n${lines.join("\n")}`,
+                output: `${label} (${filtered.length}${params.filter ? ` of ${allVulns.length} total` : ""}):\n\n${lines.join("\n\n")}`,
               }
             }
 

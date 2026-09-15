@@ -15,8 +15,20 @@ import { HomeSessionDestinationProvider } from "./home/session-destination"
 
 let once = false
 const placeholder = {
-  normal: ["Scan 10.10.10.0/24 for open ports", "Create a new engagement for target.htb", "Enumerate SMB shares on the domain controller"],
-  shell: ["nmap -sV 10.10.10.1", "gobuster dir -u http://target.htb -w /usr/share/wordlists/common.txt", "sudo -l"],
+  normal: [
+    "Audit Vault.sol for reentrancy and precision loss",
+    "Inspect storage layout and detect missing storage gaps",
+    "Run Slither and Aderyn static analysis on the codebase",
+    "Generate Foundry invariant fuzzing suite for protocol solvency",
+    "Verify flash loan price manipulation with a Foundry PoC",
+    "Generate Sherlock contest audit report in markdown",
+  ],
+  shell: [
+    "forge test -vvvv --match-test test_Exploit",
+    "slither . --json -",
+    "aderyn . --output report.json",
+    "forge inspect Vault storage-layout",
+  ],
 }
 
 export function Home() {
