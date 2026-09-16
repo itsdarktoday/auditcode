@@ -41,6 +41,7 @@ import { LocalProvider, useLocal } from "./context/local"
 import { PermissionProvider } from "./context/permission"
 import { DialogModel } from "./component/dialog-model"
 import { DialogSmallModel } from "./component/dialog-small-model"
+import { DialogTeamModel } from "./component/dialog-team-model"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
@@ -657,6 +658,26 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashAliases: ["smallmodel"],
         run: () => {
           dialog.replace(() => <DialogSmallModel />)
+        },
+      },
+      {
+        name: "red_team_model.set",
+        title: "Set Red Team model (Attacker)",
+        category: "Agent",
+        slashName: "red",
+        slashAliases: ["red-team", "redteam"],
+        run: () => {
+          dialog.replace(() => <DialogTeamModel team="red_team" />)
+        },
+      },
+      {
+        name: "blue_team_model.set",
+        title: "Set Blue Team model (Defender)",
+        category: "Agent",
+        slashName: "blue",
+        slashAliases: ["blue-team", "blueteam"],
+        run: () => {
+          dialog.replace(() => <DialogTeamModel team="blue_team" />)
         },
       },
       {

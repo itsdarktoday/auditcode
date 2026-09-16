@@ -51,6 +51,7 @@ import { SignatureLookupTool } from "./signature-lookup"
 import { ErcValidateTool } from "./erc-validate"
 import { InvariantTestTool } from "./invariant-test"
 import { ForkSimulateTool } from "./fork-simulate"
+import { DebateRunTool } from "./debate-run"
 
 import { EngagementStore } from "@auditcode/core/engagement/store"
 import * as Truncate from "./truncate"
@@ -157,6 +158,7 @@ const layer = Layer.effect(
     const ercvalidate = yield* ErcValidateTool
     const invarianttest = yield* InvariantTestTool
     const forksimulate = yield* ForkSimulateTool
+    const debaterun = yield* DebateRunTool
 
     const agent = yield* Agent.Service
 
@@ -288,6 +290,7 @@ const layer = Layer.effect(
           ercvalidate: Tool.init(ercvalidate),
           invarianttest: Tool.init(invarianttest),
           forksimulate: Tool.init(forksimulate),
+          debaterun: Tool.init(debaterun),
         })
 
         return {
@@ -331,6 +334,7 @@ const layer = Layer.effect(
             tool.ercvalidate,
             tool.invarianttest,
             tool.forksimulate,
+            tool.debaterun,
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,

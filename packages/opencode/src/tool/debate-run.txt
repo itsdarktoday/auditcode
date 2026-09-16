@@ -1,0 +1,1 @@
+Orchestrates an adversarial self-play debate between Agent Red (Attacker) and Agent Blue (Protocol Defense) on candidate smart contract vulnerabilities, compiling and executing synthesized Foundry exploit PoCs (`foundry_test`) to definitively eliminate confirmation bias and certify findings with ground truth.

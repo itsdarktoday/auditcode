@@ -25,6 +25,8 @@ import PROMPT_POC_DEV from "../session/prompt/poc-dev.txt"
 import PROMPT_SOLANA from "../session/prompt/solana.txt"
 import PROMPT_CRITIC from "../session/prompt/critic.txt"
 import PROMPT_REPORTER from "../session/prompt/reporter.txt"
+import PROMPT_RED_TEAM from "../session/prompt/red-team.txt"
+import PROMPT_BLUE_TEAM from "../session/prompt/blue-team.txt"
 
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
@@ -173,6 +175,7 @@ const layer = Layer.effect(
                 erc_validate: "allow",
                 invariant_test: "allow",
                 fork_simulate: "allow",
+                debate_run: "allow",
                 scope_check: "allow",
                 phase_control: "allow",
                 report_gen: "allow",
@@ -499,6 +502,60 @@ const layer = Layer.effect(
               user,
             ),
             prompt: PROMPT_REPORTER,
+            options: {},
+            mode: "subagent",
+            native: true,
+          },
+          red_team: {
+            name: "red_team",
+            steps: 150,
+            description: "Red Team Lead Exploit Researcher. Formulates adversarial attack hypotheses, flash-loan exploits, and writes reproducible Foundry PoC tests.",
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                read: "allow",
+                write: "allow",
+                edit: "allow",
+                grep: "allow",
+                glob: "allow",
+                state_query: "allow",
+                state_update: "allow",
+                contract_inspect: "allow",
+                storage_layout: "allow",
+                foundry_test: "allow",
+                fork_simulate: "allow",
+                invariant_test: "allow",
+                debate_run: "allow",
+              }),
+              user,
+            ),
+            prompt: PROMPT_RED_TEAM,
+            options: {},
+            mode: "subagent",
+            native: true,
+          },
+          blue_team: {
+            name: "blue_team",
+            steps: 150,
+            description: "Blue Team Protocol Defense Architect. Locates revert conditions, require statements, nonReentrant guards, and refutes false positives.",
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                read: "allow",
+                grep: "allow",
+                glob: "allow",
+                state_query: "allow",
+                state_update: "allow",
+                contract_inspect: "allow",
+                storage_layout: "allow",
+                erc_validate: "allow",
+                bash: "deny",
+                write: "deny",
+                edit: "deny",
+              }),
+              user,
+            ),
+            prompt: PROMPT_BLUE_TEAM,
             options: {},
             mode: "subagent",
             native: true,

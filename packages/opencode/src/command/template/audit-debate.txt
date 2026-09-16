@@ -1,0 +1,9 @@
+Run an adversarial self-play debate between Agent Red (Attacker) and Agent Blue (Protocol Defense) on the specified finding or contract:
+
+Target: $ARGUMENTS
+
+Workflow:
+1. Query audit state for target vulnerability details or contract scope using `state_query`.
+2. Execute `debate_run` to orchestrate the debate between Red Team and Blue Team.
+3. If an attack test is generated, execute it with the Foundry Arbiter (`foundry_test`) to establish ground-truth proof.
+4. Record the final verdict in audit state via `state_update`.

@@ -24,6 +24,7 @@ import PROMPT_REPORT from "./template/audit-report.txt"
 import PROMPT_OBJECTIVES from "./template/audit-objectives.txt"
 import PROMPT_PAUSE from "./template/audit-pause.txt"
 import PROMPT_GOAL from "./template/audit-goal.txt"
+import PROMPT_DEBATE from "./template/audit-debate.txt"
 import { LegacyEvent } from "@auditcode/schema/legacy-event"
 
 type State = {
@@ -76,6 +77,7 @@ export const Default = {
   OBJECTIVES: "objectives",
   PAUSE: "pause",
   GOAL: "goal",
+  DEBATE: "debate",
 } as const
 
 export interface Interface {
@@ -216,6 +218,14 @@ const layer = Layer.effect(
         source: "command",
         template: PROMPT_GOAL,
         hints: hints(PROMPT_GOAL),
+      }
+
+      commands[Default.DEBATE] = {
+        name: Default.DEBATE,
+        description: "run adversarial Red Team vs Blue Team debate on finding/contract [finding_id|contract]",
+        source: "command",
+        template: PROMPT_DEBATE,
+        hints: hints(PROMPT_DEBATE),
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {

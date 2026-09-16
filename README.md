@@ -167,6 +167,7 @@ State survives sessions: pause, resume, or export reports anytime without losing
 | [`foundry_test`](file:///packages/opencode/src/tool/foundry-test.ts) | Executes `forge test` with `-vvvv` traces, gas profiling, and auto-verifies PoCs |
 | [`invariant_test`](file:///packages/opencode/src/tool/invariant-test.ts) | Synthesizes formal Foundry invariant test suites, executes deep fuzzing, and tracks broken invariant counterexamples |
 | [`fork_simulate`](file:///packages/opencode/src/tool/fork-simulate.ts) | Simulates live chain state via Anvil/Forge RPC and runs the 8-vector 'Weird ERC20' token hazard matrix |
+| [`debate_run`](file:///packages/opencode/src/tool/debate-run.ts) | Runs adversarial Red Team vs. Blue Team self-play debate with Ground Truth Foundry Arbiter verification |
 | [`storage_layout`](file:///packages/opencode/src/tool/storage-layout.ts) | Inspects EVM storage slot packing and flags missing `__gap` storage collisions |
 | [`signature_lookup`](file:///packages/opencode/src/tool/signature-lookup.ts) | Resolves 4-byte selectors (`0xa9059cbb`) and event topics via OpenChain database |
 | [`erc_validate`](file:///packages/opencode/src/tool/erc-validate.ts) | Validates ERC20, ERC721, ERC1155, and ERC4626 compliance and inflation hazards |
@@ -201,27 +202,39 @@ Control your live audit session with interactive slash commands:
 | `/poc` | Registered Foundry PoC test cases and execution traces |
 | `/slither [path]` | Run Slither static analysis and ingest findings into state |
 | `/aderyn` | Run Cyfrin Aderyn AST scanner and ingest findings into state |
+| `/debate [finding\|contract]` | Run adversarial Red Team vs. Blue Team debate on a finding (e.g. `/debate 1`) or contract |
+| `/red` | Open interactive model picker for Agent Red (Attacker) |
+| `/blue` | Open interactive model picker for Agent Blue (Defender) |
 | `/forge [test]` | Execute Foundry PoC test suite with trace capture |
-| `/phase [next\|name]` | Phase manager with automated quality gates |
-| `/report [path]` | Export final institutional audit report |
+| `/phase [next|name]` | Phase manager with automated quality gates |
+| `/report [path]` | Export final institutional audit report (Markdown, Sherlock, Code4rena, Immunefi, HackenProof) |
 
 ---
 
-## ⚙️ Configuration
+## ⚔️ Adversarial Red Team vs. Blue Team Self-Play Debate
 
-Config lives at `.auditcode/auditcode.jsonc`:
+To eliminate LLM confirmation bias, AuditCode pits two adversarial subagents against each other:
+
+1. **🔴 Agent Red (Attacker)**: Assumes unlimited flash loans, arbitrary transaction reordering, and external caller freedom. Constructs end-to-end exploit traces and Foundry PoCs to prove candidate findings.
+2. **🔵 Agent Blue (Protocol Defense)**: Ruthlessly inspects the codebase to disprove the finding. Cites revert guards, modifiers (`nonReentrant`, `onlyOwner`), require checks, and EVM math to refute false positives.
+3. **⚖️ Ground Truth Foundry Arbiter**: When both models dead-lock or disagree, AuditCode synthesizes a minimal test case and executes `forge test` against the actual contract. An EVM revert proves the defense held; an EVM pass certifies the finding as `poc_verified` with 99% confidence.
+
+### Model Selection:
+Configure models dynamically using TUI commands `/red` and `/blue`, or in `.auditcode/auditcode.jsonc`:
 
 ```jsonc
 {
   "$schema": "https://auditcode.ai/schema.json",
   "provider": {
-    "anthropic": {
-      "model": "claude-3-7-sonnet-latest"
-    }
+    "anthropic": { "model": "claude-3-7-sonnet-latest" },
+    "openai": { "model": "o3-mini" }
   },
   "agent": {
-    "audit": {
-      "temperature": 0.1
+    "red_team": {
+      "model": "anthropic/claude-3-7-sonnet"
+    },
+    "blue_team": {
+      "model": "openai/o3-mini"
     }
   }
 }
