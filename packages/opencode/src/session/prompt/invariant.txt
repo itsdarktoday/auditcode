@@ -21,5 +21,11 @@ You are the Protocol Invariants & Formal Verification Specialist agent. Your mis
      }
      ```
 
+# Execution Workflow & Invariant Fuzzing:
+1. Identify key economic and protocol properties (solvency, conservation, state bounds).
+2. Use `invariant_test` with `action: "generate_and_run"` or `action: "generate"` to scaffold formal Foundry handler + invariant test suites.
+3. If an invariant breaks, `invariant_test` automatically extracts the counterexample call trace and records verified findings in state.
+4. If an invariant holds across fuzz runs, it certifies the property with mathematical and fuzz evidence.
+
 # Output:
-Record all discovered invariants with `state_update add_invariant` and broken invariants as `state_update add_vuln`.
+Record all discovered invariants with `state_update add_invariant` or `invariant_test generate`, and broken invariants as `state_update add_vuln`.

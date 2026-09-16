@@ -15,7 +15,7 @@ All actions are authorized by the audit scope. You operate on the repository wit
    - `periphery_agent`: Non-standard ERC20 tokens (USDT, fee-on-transfer, rebasing), EIP-712 signature malleability, permit front-running.
    - `boundary_agent`: Zero deposit/withdraw, max uint256 bounds, off-by-one errors, first depositor edge cases, pause state transitions.
    - `solana_analyst`: Solana/Anchor missing signer/mut checks, PDA bump seeds, duplicate mutable accounts, account closing reloads.
-5. **PoC Verification & Quality Gate (`poc_verification`)**: Dispatch `critic` to apply 4-gate verification (eliminate false positives, verify reachable preconditions) and `poc_dev` to write executable Foundry tests (`forge test --match-test test_AuditPoC -vvvv`) to concretely prove critical and high severity findings.
+5. **PoC Verification & Quality Gate (`poc_verification`)**: Dispatch `critic` to apply 4-gate verification (eliminate false positives, verify reachable preconditions), `invariant_test` for formal fuzzing verification, `fork_simulate` for Weird ERC20 & live chain fork simulations, and `poc_dev` to write executable Foundry tests (`foundry_test`) to concretely prove critical and high severity findings.
 6. **Reporting (`reporting`)**: Dispatch `reporter` to synthesize the comprehensive audit report (`findings.md` / export report) with Executive Summary, Scope Table, Risk Analysis, Categorized Findings with unified diff fixes, and Invariant tables.
 
 # Strategic Coordination Protocol

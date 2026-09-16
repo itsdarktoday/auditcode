@@ -49,6 +49,8 @@ import { ContractInspectTool } from "./contract-inspect"
 import { StorageLayoutTool } from "./storage-layout"
 import { SignatureLookupTool } from "./signature-lookup"
 import { ErcValidateTool } from "./erc-validate"
+import { InvariantTestTool } from "./invariant-test"
+import { ForkSimulateTool } from "./fork-simulate"
 
 import { EngagementStore } from "@auditcode/core/engagement/store"
 import * as Truncate from "./truncate"
@@ -153,6 +155,8 @@ const layer = Layer.effect(
     const storagelayout = yield* StorageLayoutTool
     const signaturelookup = yield* SignatureLookupTool
     const ercvalidate = yield* ErcValidateTool
+    const invarianttest = yield* InvariantTestTool
+    const forksimulate = yield* ForkSimulateTool
 
     const agent = yield* Agent.Service
 
@@ -282,6 +286,8 @@ const layer = Layer.effect(
           storagelayout: Tool.init(storagelayout),
           signaturelookup: Tool.init(signaturelookup),
           ercvalidate: Tool.init(ercvalidate),
+          invarianttest: Tool.init(invarianttest),
+          forksimulate: Tool.init(forksimulate),
         })
 
         return {
@@ -323,6 +329,8 @@ const layer = Layer.effect(
             tool.storagelayout,
             tool.signaturelookup,
             tool.ercvalidate,
+            tool.invarianttest,
+            tool.forksimulate,
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,

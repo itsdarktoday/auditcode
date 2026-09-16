@@ -1,0 +1,1 @@
+Simulates protocol behavior against live mainnet forks and an 8-vector 'Weird ERC20' token hazard matrix (Fee-on-Transfer, Rebasing, Missing Return, Blacklist, ERC777 Hooks, Approval Race), catching fatal accounting desynchronizations and integration vulnerabilities.

@@ -1,0 +1,1 @@
+Synthesizes formal Foundry invariant test suites (Handler + Invariants), executes deep fuzzing (`forge test --match-test invariant_`), parses counterexample call traces, and automatically updates invariant proofs and confirmed vulnerabilities in audit state.

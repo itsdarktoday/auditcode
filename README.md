@@ -165,6 +165,8 @@ State survives sessions: pause, resume, or export reports anytime without losing
 | [`slither_parse`](file:///packages/opencode/src/tool/slither-parse.ts) | Runs Slither and automatically converts JSON detector findings into typed audit state |
 | [`aderyn_parse`](file:///packages/opencode/src/tool/aderyn-parse.ts) | Runs Cyfrin Aderyn AST static analysis and populates vulnerability ledger |
 | [`foundry_test`](file:///packages/opencode/src/tool/foundry-test.ts) | Executes `forge test` with `-vvvv` traces, gas profiling, and auto-verifies PoCs |
+| [`invariant_test`](file:///packages/opencode/src/tool/invariant-test.ts) | Synthesizes formal Foundry invariant test suites, executes deep fuzzing, and tracks broken invariant counterexamples |
+| [`fork_simulate`](file:///packages/opencode/src/tool/fork-simulate.ts) | Simulates live chain state via Anvil/Forge RPC and runs the 8-vector 'Weird ERC20' token hazard matrix |
 | [`storage_layout`](file:///packages/opencode/src/tool/storage-layout.ts) | Inspects EVM storage slot packing and flags missing `__gap` storage collisions |
 | [`signature_lookup`](file:///packages/opencode/src/tool/signature-lookup.ts) | Resolves 4-byte selectors (`0xa9059cbb`) and event topics via OpenChain database |
 | [`erc_validate`](file:///packages/opencode/src/tool/erc-validate.ts) | Validates ERC20, ERC721, ERC1155, and ERC4626 compliance and inflation hazards |
