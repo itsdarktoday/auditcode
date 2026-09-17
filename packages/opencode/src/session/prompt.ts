@@ -1148,29 +1148,58 @@ const layer = Layer.effect(
         let step = 0
         const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
 
-        // Auto-load engagement: .selected file (from TUI dialog) > .last fallback > zero-config bootstrap
+        // Auto-load engagement: .selected file (from TUI dialog) > project-scoped match > zero-config bootstrap
         yield* Effect.gen(function* () {
           const current = yield* engagement.get()
           if (current) return
-          const selected = yield* engagement.readSelected()
-          if (selected === "__none__") return
-          if (selected === "__new__") return
-          if (selected) {
-            yield* engagement.load(selected)
-            return
-          }
-          const lastName = yield* engagement.lastEngagement()
-          if (lastName) {
-            yield* engagement.load(lastName)
-            return
-          }
-
-          // Zero-config auto-bootstrapping when no engagement exists
           const targetDir = ctx.directory || ctx.worktree || process.cwd()
           const dirName = path.basename(targetDir) || "audit"
           const baseName = dirName.replace(/[^a-zA-Z0-9_-]/g, "-")
 
-          yield* engagement.create(baseName)
+          const selected = yield* engagement.readSelected(targetDir)
+          if (selected === "__none__") return
+          if (selected === "__new__") {
+            const newName = `${baseName}-${Date.now().toString(36)}`
+            yield* engagement.create(newName, targetDir)
+            const hasFoundry = yield* fsys.existsSafe(path.join(targetDir, "foundry.toml"))
+            const hasHardhat =
+              (yield* fsys.existsSafe(path.join(targetDir, "hardhat.config.js"))) ||
+              (yield* fsys.existsSafe(path.join(targetDir, "hardhat.config.ts")))
+            const hasAnchor = yield* fsys.existsSafe(path.join(targetDir, "Anchor.toml"))
+            const hasMove = yield* fsys.existsSafe(path.join(targetDir, "Move.toml"))
+
+            const framework = hasFoundry
+              ? ("foundry" as const)
+              : hasHardhat
+                ? ("hardhat" as const)
+                : hasAnchor
+                  ? ("anchor" as const)
+                  : hasMove
+                    ? ("move" as const)
+                    : ("raw_solidity" as const)
+
+            yield* engagement.updateScope({
+              targets: [targetDir],
+              framework,
+            })
+            yield* engagement.setPhase("scope_recon")
+            yield* engagement.setMode("auto")
+            return
+          }
+          if (selected) {
+            yield* engagement.load(selected)
+            return
+          }
+
+          // Check if an engagement is already associated with this directory
+          const projectEng = yield* engagement.forDirectory(targetDir)
+          if (projectEng) {
+            yield* engagement.load(projectEng)
+            return
+          }
+
+          // Zero-config auto-bootstrapping when no engagement exists for this project
+          yield* engagement.create(baseName, targetDir)
 
           const hasFoundry = yield* fsys.existsSafe(path.join(targetDir, "foundry.toml"))
           const hasHardhat =

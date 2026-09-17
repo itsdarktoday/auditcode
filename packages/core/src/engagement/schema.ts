@@ -566,6 +566,7 @@ export type Goal = typeof Goal.Type
 export const State = Schema.Struct({
   id: ID,
   name: Schema.String,
+  project_dir: Schema.optional(Schema.String),
   created_at: Schema.String,
   updated_at: Schema.String,
   scope: Scope,
@@ -821,17 +822,29 @@ export function toOODAContext(state: State, recentChanges: ChangelogEntry[]): st
 
 export function summary(state: State) {
   const contractCount = Object.keys(state.contracts ?? {}).length
-  const topVulns = Object.values(state.vulns ?? {})
-  const hostVulns = Object.values(state.hosts).flatMap((h) => h.vulns)
-  const allVulns = [...topVulns, ...hostVulns]
+  const vulnMap = new Map<string, Vulnerability>()
+  for (const [id, v] of Object.entries(state.vulns ?? {})) {
+    vulnMap.set(id, v)
+  }
+  for (const host of Object.values(state.hosts ?? {})) {
+    for (const v of host.vulns ?? []) {
+      const key = v.id || `${v.contract_name || "global"}::${v.title || ""}`
+      if (!vulnMap.has(key)) {
+        vulnMap.set(key, v)
+      }
+    }
+  }
+  const allVulns = [...vulnMap.values()].filter(
+    (v) => v.status !== "false_positive" && v.status !== "mitigated" && v.critic_review?.verdict !== "rejected",
+  )
   const vulnCount = allVulns.length
 
-  const critCount = allVulns.filter((v) => v.severity === "critical").length
-  const highCount = allVulns.filter((v) => v.severity === "high").length
-  const medCount = allVulns.filter((v) => v.severity === "medium").length
-  const lowCount = allVulns.filter((v) => v.severity === "low").length
-  const gasCount = allVulns.filter((v) => v.severity === "gas").length
-  const infoCount = allVulns.filter((v) => v.severity === "info").length
+  const critCount = allVulns.filter((v) => (v.severity ?? "medium").toLowerCase() === "critical").length
+  const highCount = allVulns.filter((v) => (v.severity ?? "medium").toLowerCase() === "high").length
+  const medCount = allVulns.filter((v) => (v.severity ?? "medium").toLowerCase() === "medium").length
+  const lowCount = allVulns.filter((v) => (v.severity ?? "medium").toLowerCase() === "low").length
+  const gasCount = allVulns.filter((v) => (v.severity ?? "medium").toLowerCase() === "gas").length
+  const infoCount = allVulns.filter((v) => (v.severity ?? "medium").toLowerCase() === "info").length
   const pocCount = Object.keys(state.pocs ?? {}).length
   const invariantCount = Object.keys(state.invariants ?? {}).length
   const objectives = state.objectives ? Object.values(state.objectives) : []

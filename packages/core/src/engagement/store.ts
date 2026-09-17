@@ -67,10 +67,12 @@ export interface Interface {
   readonly updatePoCTest: (id: string, patch: Partial<EngagementSchema.PoCTest>) => Effect.Effect<boolean>
   readonly get: () => Effect.Effect<EngagementSchema.State | undefined>
   readonly save: (state: EngagementSchema.State) => Effect.Effect<void>
-  readonly create: (name: string) => Effect.Effect<EngagementSchema.State>
+  readonly create: (name: string, projectDir?: string) => Effect.Effect<EngagementSchema.State>
   readonly load: (name: string) => Effect.Effect<EngagementSchema.State | undefined>
   readonly lastEngagement: () => Effect.Effect<string | undefined>
   readonly listEngagements: () => Effect.Effect<string[]>
+  readonly forDirectory: (directory: string) => Effect.Effect<string | undefined>
+  readonly setProjectEngagement: (directory: string, name: string) => Effect.Effect<void>
   readonly addHost: (ip: string, data?: Partial<EngagementSchema.Host>) => Effect.Effect<EngagementSchema.Host>
   readonly deleteHost: (ip: string) => Effect.Effect<boolean>
   readonly addVuln: (hostIp: string, vuln: EngagementSchema.Vulnerability) => Effect.Effect<void>
@@ -141,7 +143,7 @@ export interface Interface {
   readonly updateGoal: (patch: { status?: EngagementSchema.GoalStatus; evidence?: string }) => Effect.Effect<boolean>
   readonly clearGoal: () => Effect.Effect<void>
   // TUI engagement selector
-  readonly readSelected: () => Effect.Effect<string | undefined>
+  readonly readSelected: (projectDir?: string) => Effect.Effect<string | undefined>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@auditcode/EngagementStore") {}
@@ -209,7 +211,9 @@ const layer = Layer.effect(
         const filePath = changelogFilePath(name)
         const dir = path.dirname(filePath)
         fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
-        fs.writeFileSync(filePath, JSON.stringify(entries, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        const tmpFile = `${filePath}.tmp.${Date.now()}`
+        fs.writeFileSync(tmpFile, JSON.stringify(entries, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        fs.renameSync(tmpFile, filePath)
       } catch {
         // changelog persistence is best-effort
       }
@@ -231,7 +235,9 @@ const layer = Layer.effect(
         const filePath = decisionsFilePath(name)
         const dir = path.dirname(filePath)
         fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
-        fs.writeFileSync(filePath, JSON.stringify(entries, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        const tmpFile = `${filePath}.tmp.${Date.now()}`
+        fs.writeFileSync(tmpFile, JSON.stringify(entries, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        fs.renameSync(tmpFile, filePath)
       } catch {
         // decisions persistence is best-effort
       }
@@ -253,7 +259,9 @@ const layer = Layer.effect(
         const filePath = agentContextsFilePath(name)
         const dir = path.dirname(filePath)
         fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
-        fs.writeFileSync(filePath, JSON.stringify(contexts, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        const tmpFile = `${filePath}.tmp.${Date.now()}`
+        fs.writeFileSync(tmpFile, JSON.stringify(contexts, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        fs.renameSync(tmpFile, filePath)
       } catch {
         // agent contexts persistence is best-effort
       }
@@ -275,7 +283,9 @@ const layer = Layer.effect(
         const filePath = wordlistsFilePath(name)
         const dir = path.dirname(filePath)
         fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
-        fs.writeFileSync(filePath, JSON.stringify(entries, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        const tmpFile = `${filePath}.tmp.${Date.now()}`
+        fs.writeFileSync(tmpFile, JSON.stringify(entries, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        fs.renameSync(tmpFile, filePath)
       } catch {
         // wordlist persistence is best-effort
       }
@@ -313,10 +323,26 @@ const layer = Layer.effect(
         const dir = path.dirname(filePath)
         fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
         const json = encode(state)
-        fs.writeFileSync(filePath, JSON.stringify(json, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        const tmpPath = `${filePath}.tmp.${Date.now()}`
+        fs.writeFileSync(tmpPath, JSON.stringify(json, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+        fs.renameSync(tmpPath, filePath)
+
         const lastPath = lastFilePath()
         fs.mkdirSync(path.dirname(lastPath), { recursive: true, mode: 0o700 })
-        fs.writeFileSync(lastPath, state.name, { encoding: "utf-8", mode: 0o600 })
+        const tmpLast = `${lastPath}.tmp.${Date.now()}`
+        fs.writeFileSync(tmpLast, state.name, { encoding: "utf-8", mode: 0o600 })
+        fs.renameSync(tmpLast, lastPath)
+
+        if (state.project_dir) {
+          try {
+            const projectsFile = path.join(ENGAGEMENTS_DIR, "projects.json")
+            const projects = fs.existsSync(projectsFile) ? JSON.parse(fs.readFileSync(projectsFile, "utf-8")) : {}
+            projects[path.resolve(state.project_dir)] = state.name
+            const tmpProjects = `${projectsFile}.tmp.${Date.now()}`
+            fs.writeFileSync(tmpProjects, JSON.stringify(projects, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+            fs.renameSync(tmpProjects, projectsFile)
+          } catch {}
+        }
       })
 
     const persistCurrent = Effect.gen(function* () {
@@ -517,13 +543,15 @@ const layer = Layer.effect(
         if (wordlists.length > 0) persistWordlists(updated.name, wordlists)
       }),
 
-      create: Effect.fn("EngagementStore.create")(function* (name) {
+      create: Effect.fn("EngagementStore.create")(function* (name, projectDir) {
+        const initialTargets = projectDir ? [projectDir] : []
         const state: EngagementSchema.State = {
           id: EngagementSchema.ID.make(crypto.randomUUID().slice(0, 8)),
           name,
+          project_dir: projectDir,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          scope: { targets: [], excludes: [], notes: "" },
+          scope: { targets: initialTargets, excludes: [], notes: "" },
           hosts: {},
           credentials: {},
           flags: [],
@@ -558,8 +586,74 @@ const layer = Layer.effect(
           yield* Ref.set(agentContextsRef, loadAgentContexts(name))
           yield* Ref.set(interruptQueueRef, [])
           yield* Ref.set(wordlistsRef, loadWordlists(name))
+          if (state.project_dir) {
+            try {
+              const projectsFile = path.join(ENGAGEMENTS_DIR, "projects.json")
+              const projects = fs.existsSync(projectsFile) ? JSON.parse(fs.readFileSync(projectsFile, "utf-8")) : {}
+              projects[path.resolve(state.project_dir)] = name
+              const tmpProjects = `${projectsFile}.tmp.${Date.now()}`
+              fs.writeFileSync(tmpProjects, JSON.stringify(projects, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+              fs.renameSync(tmpProjects, projectsFile)
+            } catch {}
+          }
         }
         return state
+      }),
+
+      forDirectory: Effect.fn("EngagementStore.forDirectory")(function* (dir) {
+        const normalized = path.resolve(dir)
+        const projectsFile = path.join(ENGAGEMENTS_DIR, "projects.json")
+        if (fs.existsSync(projectsFile)) {
+          try {
+            const projects = JSON.parse(fs.readFileSync(projectsFile, "utf-8"))
+            const mapped = projects[normalized]
+            if (mapped) {
+              if (mapped === "__none__" || mapped === "__new__") return undefined
+              if (fs.existsSync(stateFilePath(mapped))) return mapped
+            }
+          } catch {}
+        }
+
+        if (!fs.existsSync(ENGAGEMENTS_DIR)) return undefined
+        const engagements = fs.readdirSync(ENGAGEMENTS_DIR).filter((entry) => {
+          if (entry.startsWith(".")) return false
+          try {
+            return fs.statSync(path.join(ENGAGEMENTS_DIR, entry)).isDirectory()
+          } catch {
+            return false
+          }
+        })
+
+        const baseName = path.basename(normalized).replace(/[^a-zA-Z0-9_-]/g, "-")
+        if (engagements.includes(baseName) && fs.existsSync(stateFilePath(baseName))) {
+          return baseName
+        }
+
+        for (const name of engagements) {
+          const p = stateFilePath(name)
+          if (!fs.existsSync(p)) continue
+          try {
+            const raw = JSON.parse(fs.readFileSync(p, "utf-8"))
+            if (raw.project_dir && path.resolve(raw.project_dir) === normalized) return name
+            if (raw.scope?.targets?.some((t: string) => path.resolve(t) === normalized || normalized.startsWith(path.resolve(t)))) return name
+            const contracts = Object.values(raw.contracts ?? {}) as Array<{ path?: string }>
+            if (contracts.some((c) => c.path && path.resolve(c.path).startsWith(normalized))) return name
+          } catch {}
+        }
+        return undefined
+      }),
+
+      setProjectEngagement: Effect.fn("EngagementStore.setProjectEngagement")(function* (dir, name) {
+        const normalized = path.resolve(dir)
+        try {
+          fs.mkdirSync(ENGAGEMENTS_DIR, { recursive: true, mode: 0o700 })
+          const projectsFile = path.join(ENGAGEMENTS_DIR, "projects.json")
+          const projects = fs.existsSync(projectsFile) ? JSON.parse(fs.readFileSync(projectsFile, "utf-8")) : {}
+          projects[normalized] = name
+          const tmpProjects = `${projectsFile}.tmp.${Date.now()}`
+          fs.writeFileSync(tmpProjects, JSON.stringify(projects, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+          fs.renameSync(tmpProjects, projectsFile)
+        } catch {}
       }),
 
       lastEngagement: () =>
@@ -845,22 +939,17 @@ const layer = Layer.effect(
         const result = yield* Ref.modify(stateRef, (current) => {
           if (!current) return [{ modified: false, warned: false }, current]
           const patch: Record<string, unknown> = {}
-          let warned = false
-          if (scope.targets) {
-            warned = true
-          }
+          if (scope.targets && scope.targets.length > 0) patch.targets = scope.targets
           if (scope.excludes) patch.excludes = scope.excludes
           if (scope.discovered_targets) patch.discovered_targets = scope.discovered_targets
+          if (scope.framework) patch.framework = scope.framework
           if (scope.notes !== undefined) patch.notes = scope.notes
-          if (Object.keys(patch).length === 0 && !warned) return [{ modified: false, warned: false }, current]
-          return [{ modified: Object.keys(patch).length > 0, warned }, { ...current, scope: { ...current.scope, ...patch } as EngagementSchema.Scope }]
+          if (Object.keys(patch).length === 0) return [{ modified: false, warned: false }, current]
+          return [{ modified: true, warned: false }, { ...current, scope: { ...current.scope, ...patch } as EngagementSchema.Scope }]
         })
         if (result.modified) {
           yield* logChange("update_scope", "scope", "scope", `Scope updated`)
           yield* persistCurrent
-        }
-        if (result.warned) {
-          yield* logChange("update_scope_rejected", "scope", "scope", `Rejected targets modification — use discovered_targets`)
         }
       }),
 
@@ -1394,10 +1483,21 @@ const layer = Layer.effect(
         }
       }),
 
-      readSelected: Effect.fn("EngagementStore.readSelected")(function* () {
+      readSelected: Effect.fn("EngagementStore.readSelected")(function* (projectDir) {
         const selectedPath = path.join(ENGAGEMENTS_DIR, SELECTED_FILE)
         try {
+          if (!fs.existsSync(selectedPath)) return undefined
           const value = fs.readFileSync(selectedPath, "utf-8").trim()
+          if (projectDir && value) {
+            try {
+              const projectsFile = path.join(ENGAGEMENTS_DIR, "projects.json")
+              const projects = fs.existsSync(projectsFile) ? JSON.parse(fs.readFileSync(projectsFile, "utf-8")) : {}
+              projects[path.resolve(projectDir)] = value
+              const tmpProjects = `${projectsFile}.tmp.${Date.now()}`
+              fs.writeFileSync(tmpProjects, JSON.stringify(projects, undefined, 2), { encoding: "utf-8", mode: 0o600 })
+              fs.renameSync(tmpProjects, projectsFile)
+            } catch {}
+          }
           fs.unlinkSync(selectedPath)
           return value || undefined
         } catch {
