@@ -1,0 +1,16 @@
+Exploit Intelligence Engine (EIE) Knowledge Query & Hypothesis Tool
+
+Use this tool to consult AuditCode's high-fidelity security memory and reasoning engine.
+Unlike generic text similarity search, EIE decouples knowledge into:
+1. Patterns (vulnerability mechanisms, root causes, preconditions, danger signals, mitigations)
+2. Attack Templates (executable exploit recipes mapped to semantic roles)
+3. Historical Findings (real-world audited hacks, postmortems, PoCs)
+4. Counterexamples (canonical safe implementations and defense mechanisms used to eliminate false positives)
+
+ACTIONS:
+- "query" (default): Search patterns by category, primitives (e.g. ERC4626, AMM, CurvePool), keywords, or AST danger signals.
+- "get_pattern": Retrieve comprehensive details of a specific pattern, including preconditions, mitigations, attack templates, counterexamples, and historical findings.
+- "check_counterexamples": Scan contract code or a snippet against known counterexamples to determine if the apparent vulnerability is actually mitigated (eliminating false positives).
+- "match_roles": Match attack template semantic roles (FUND_IN, FUND_OUT, PRICE_ORACLE_VIEW, etc.) to target contract functions.
+- "formulate_hypothesis": Formulate a structured attack hypothesis with precondition checks, counterexample risk analysis, and confidence scoring.
+- "load": Reload knowledge from disk (e.g., custom directory or workspace data/eie).

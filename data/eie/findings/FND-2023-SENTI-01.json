@@ -1,0 +1,48 @@
+{
+  "id": "FND-2023-SENTI-01",
+  "title": "Sentiment Protocol Balancer Read-Only Reentrancy Exploit",
+  "pattern_id": "PAT-REENTRANCY-RO-001",
+  "source": {
+    "type": "postmortem",
+    "organization": "Sentiment / PeckShield",
+    "reference_url": "https://rekt.news/sentiment-rekt/"
+  },
+  "target_protocol": {
+    "name": "Sentiment Protocol",
+    "category": "Lending Protocol",
+    "repository_url": "https://github.com/sentimentxyz"
+  },
+  "date": "2023-04-04",
+  "severity": "critical",
+  "chain": "arbitrum",
+  "financial_impact": {
+    "amount_usd": 1000000,
+    "asset_stolen": "ETH, USDC, USDT, FRAX"
+  },
+  "code_evidence": [
+    {
+      "file": "contracts/oracles/BalancerPoolOracle.sol",
+      "lines": "getPrice",
+      "snippet": "uint256 poolTokenPrice = pool.getRate();"
+    }
+  ],
+  "attack_walkthrough": [
+    {
+      "step": 1,
+      "action": "Flashloaned funds and joined Balancer 50WETH-50WBTC pool."
+    },
+    {
+      "step": 2,
+      "action": "Initiated exitPool, triggering fallback before Balancer vault settled token balances."
+    },
+    {
+      "step": 3,
+      "action": "Called Sentiment with distorted pool rate to borrow assets with negligible collateral."
+    }
+  ],
+  "poc": {
+    "available": true,
+    "framework": "foundry",
+    "solidity_code": "// Foundry test demonstrating Sentiment Balancer read-only reentrancy"
+  }
+}

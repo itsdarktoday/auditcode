@@ -1,0 +1,14 @@
+{
+  "id": "CE-INFLATION-VIRTUAL-SHARES",
+  "pattern_id": "PAT-ACCOUNTING-001",
+  "title": "OpenZeppelin v4.9+ Virtual Shares / Decimal Offset Defense",
+  "apparent_vulnerability": "Vault allows direct token transfers and starts with 0 assets and 0 shares.",
+  "mitigating_mechanism": "ERC4626 implementation adds virtual shares and virtual assets in calculations via _decimalsOffset(), rendering the donation ratio mathematically ineffective.",
+  "code_example": "function _decimalsOffset() internal view virtual returns (uint8) { return 3; }\nfunction _convertToShares(uint256 assets, Math.Rounding rounding) internal view virtual returns (uint256) {\n    return assets.mulDiv(totalSupply() + 10 ** _decimalsOffset(), totalAssets() + 1, rounding);\n}",
+  "why_attack_fails": "The denominator totalAssets() + 1 and numerator offset 10 ** _decimalsOffset() prevents zero-share rounding. An attacker attempting a 1 wei donation attack would lose orders of magnitude more capital than any extractable yield.",
+  "rejection_signal": {
+    "ast_check": "_decimalsOffset",
+    "storage_check": "virtualShares",
+    "revert_signature": "ZeroShares()"
+  }
+}

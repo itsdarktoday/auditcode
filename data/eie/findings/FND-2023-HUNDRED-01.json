@@ -1,0 +1,48 @@
+{
+  "id": "FND-2023-HUNDRED-01",
+  "title": "Hundred Finance Optimism vTokens Inflation Hack",
+  "pattern_id": "PAT-ACCOUNTING-001",
+  "source": {
+    "type": "postmortem",
+    "organization": "Hundred Finance / PeckShield",
+    "reference_url": "https://rekt.news/hundred-finance-rekt/"
+  },
+  "target_protocol": {
+    "name": "Hundred Finance",
+    "category": "Lending Protocol",
+    "repository_url": "https://github.com/hundred-finance"
+  },
+  "date": "2023-04-15",
+  "severity": "critical",
+  "chain": "optimism",
+  "financial_impact": {
+    "amount_usd": 7400000,
+    "asset_stolen": "WBTC, ETH, USDC, DAI"
+  },
+  "code_evidence": [
+    {
+      "file": "contracts/CToken.sol",
+      "lines": "exchangeRateStoredInternal",
+      "snippet": "exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply;"
+    }
+  ],
+  "attack_walkthrough": [
+    {
+      "step": 1,
+      "action": "Attacker entered empty hWBTC market with small deposit."
+    },
+    {
+      "step": 2,
+      "action": "Donated WBTC to inflate exchangeRate to astronomical value."
+    },
+    {
+      "step": 3,
+      "action": "Borrowed entire protocol lending liquidity across other tokens using inflated collateral."
+    }
+  ],
+  "poc": {
+    "available": true,
+    "framework": "foundry",
+    "solidity_code": "// Foundry test demonstrating Hundred Finance exchange rate inflation"
+  }
+}

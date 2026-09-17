@@ -1,0 +1,64 @@
+{
+  "id": "TMPL-REENTRANCY-RO-01",
+  "pattern_id": "PAT-REENTRANCY-RO-001",
+  "name": "Cross-Contract Read-Only Reentrancy Attack Recipe",
+  "description": "Exploit sequence exploiting temporary oracle price dislocation during pool liquidity withdrawal callback.",
+  "semantic_role_requirements": {
+    "POOL_DEPOSIT": {
+      "role": "FUND_IN",
+      "expected_mutability": "payable",
+      "candidate_names": ["add_liquidity", "deposit"]
+    },
+    "POOL_WITHDRAW": {
+      "role": "FUND_OUT",
+      "expected_mutability": "nonpayable",
+      "candidate_names": ["remove_liquidity", "remove_liquidity_one_coin", "withdraw"]
+    },
+    "ORACLE_READ": {
+      "role": "PRICE_ORACLE_VIEW",
+      "expected_mutability": "view",
+      "candidate_names": ["get_virtual_price", "getRate", "consult", "getPrice"]
+    },
+    "VICTIM_BORROW": {
+      "role": "DEBT_CREATION",
+      "expected_mutability": "nonpayable",
+      "candidate_names": ["borrow", "takeLoan"]
+    }
+  },
+  "attack_steps": [
+    {
+      "order": 1,
+      "action": "Flashloan large capital and deposit into AMM pool to acquire substantial LP shares.",
+      "role_invoked": "POOL_DEPOSIT",
+      "parameter_rules": "max_flashloan",
+      "expected_state_delta": "attacker receives LP tokens"
+    },
+    {
+      "order": 2,
+      "action": "Trigger remove_liquidity() which transfers ETH or token with receive() callback before pool state settles.",
+      "role_invoked": "POOL_WITHDRAW",
+      "parameter_rules": "burn_all_lp",
+      "expected_state_delta": "pool transfers ETH to attacker contract"
+    },
+    {
+      "order": 3,
+      "action": "In receive() fallback callback, call victim lending protocol to borrow assets against temporarily inflated LP collateral valuation.",
+      "role_invoked": "VICTIM_BORROW",
+      "parameter_rules": "max_borrow_based_on_inflated_price",
+      "expected_state_delta": "attacker drains victim lending liquidity"
+    },
+    {
+      "order": 4,
+      "action": "Execution returns from receive() back to pool, pool completes state cleanup, and attacker repays flashloan with net profit.",
+      "role_invoked": "POOL_WITHDRAW",
+      "parameter_rules": "flashloan_repay",
+      "expected_state_delta": "attacker walks away with stolen funds"
+    }
+  ],
+  "profitability_model": {
+    "capital_required_formula": "flashloan_fee",
+    "attacker_proceeds_formula": "borrowed_value - collateral_true_value - flashloan_fee",
+    "success_condition": "attacker_proceeds > 0"
+  },
+  "foundry_skeleton": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\nimport \"forge-std/Test.sol\";\n\ncontract ReadOnlyReentrancyPoC is Test {\n    function testReadOnlyReentrancy() public {\n        // 1. Flashloan capital\n        // 2. Add liquidity\n        // 3. Remove liquidity and reenter via receive()\n        // 4. Overborrow from victim\n        // 5. Repay flashloan and assert profit\n    }\n}"
+}

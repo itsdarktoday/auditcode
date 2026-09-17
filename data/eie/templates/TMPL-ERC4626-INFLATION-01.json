@@ -1,0 +1,59 @@
+{
+  "id": "TMPL-ERC4626-INFLATION-01",
+  "pattern_id": "PAT-ACCOUNTING-001",
+  "name": "First-Depositor ERC4626 Share Inflation Recipe",
+  "description": "Exploit sequence exploiting rounding down in convertToShares by front-running initial deposit with 1 wei mint followed by large donation.",
+  "semantic_role_requirements": {
+    "VAULT_DEPOSIT": {
+      "role": "FUND_IN",
+      "expected_mutability": "nonpayable",
+      "candidate_names": ["deposit", "mint"]
+    },
+    "VAULT_DONATE": {
+      "role": "DIRECT_DONATION",
+      "expected_mutability": "nonpayable",
+      "candidate_names": ["transfer", "transferFrom", "donate"]
+    },
+    "VAULT_WITHDRAW": {
+      "role": "FUND_OUT",
+      "expected_mutability": "nonpayable",
+      "candidate_names": ["withdraw", "redeem"]
+    }
+  },
+  "attack_steps": [
+    {
+      "order": 1,
+      "action": "Attacker calls deposit(1 wei) to mint 1 share when totalSupply is 0.",
+      "role_invoked": "VAULT_DEPOSIT",
+      "parameter_rules": "assets = 1",
+      "expected_state_delta": "totalSupply += 1, totalAssets += 1"
+    },
+    {
+      "order": 2,
+      "action": "Attacker transfers huge amount of underlying asset directly to vault.",
+      "role_invoked": "VAULT_DONATE",
+      "parameter_rules": "amount = targetVictimDeposit / 2",
+      "expected_state_delta": "totalAssets increases dramatically while totalSupply remains 1"
+    },
+    {
+      "order": 3,
+      "action": "Victim executes deposit(amount). convertToShares rounds down to 0 or 1 share.",
+      "role_invoked": "VAULT_DEPOSIT",
+      "parameter_rules": "victimAssets < totalAssets",
+      "expected_state_delta": "victim gets 0 shares or severely diluted shares"
+    },
+    {
+      "order": 4,
+      "action": "Attacker redeems their initial share, receiving their donation plus victim's assets.",
+      "role_invoked": "VAULT_WITHDRAW",
+      "parameter_rules": "shares = 1",
+      "expected_state_delta": "attacker drains vault assets"
+    }
+  ],
+  "profitability_model": {
+    "capital_required_formula": "target_victim_deposit / 2",
+    "attacker_proceeds_formula": "victim_deposit - 1",
+    "success_condition": "attacker_proceeds > gas_cost"
+  },
+  "foundry_skeleton": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\nimport \"forge-std/Test.sol\";\n\ncontract ERC4626InflationPoC is Test {\n    function testInflationExploit() public {\n        // 1. Setup vault\n        // 2. Deposit 1 wei\n        // 3. Donate assets\n        // 4. Victim deposit\n        // 5. Attacker redeem\n    }\n}"
+}

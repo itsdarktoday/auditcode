@@ -53,6 +53,8 @@ import { InvariantTestTool } from "./invariant-test"
 import { ForkSimulateTool } from "./fork-simulate"
 import { DebateRunTool } from "./debate-run"
 import { TaintAnalyzeTool } from "./taint-analyze"
+import { EieQueryTool } from "./eie-query"
+import { EIEStore } from "@auditcode/core/eie/store"
 
 import { EngagementStore } from "@auditcode/core/engagement/store"
 import * as Truncate from "./truncate"
@@ -161,6 +163,7 @@ const layer = Layer.effect(
     const forksimulate = yield* ForkSimulateTool
     const debaterun = yield* DebateRunTool
     const taintanalyze = yield* TaintAnalyzeTool
+    const eiequery = yield* EieQueryTool
 
     const agent = yield* Agent.Service
 
@@ -294,6 +297,7 @@ const layer = Layer.effect(
           forksimulate: Tool.init(forksimulate),
           debaterun: Tool.init(debaterun),
           taintanalyze: Tool.init(taintanalyze),
+          eiequery: Tool.init(eiequery),
         })
 
         return {
@@ -339,6 +343,7 @@ const layer = Layer.effect(
             tool.forksimulate,
             tool.debaterun,
             tool.taintanalyze,
+            tool.eiequery,
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,
@@ -523,6 +528,7 @@ export const node = LayerNode.make({
     Database.node,
     Ripgrep.node,
     EngagementStore.node,
+    EIEStore.node,
   ],
 })
 

@@ -1,0 +1,70 @@
+{
+  "id": "PAT-REENTRANCY-RO-001",
+  "name": "Read-Only Reentrancy in Multi-Asset AMM Pools",
+  "category": "REENTRANCY",
+  "sub_category": "read_only_oracle_desync",
+  "severity_default": "critical",
+  "primitives_affected": [
+    "CurvePool",
+    "BalancerVault",
+    "AMM",
+    "PriceOracle",
+    "LendingProtocol"
+  ],
+  "root_cause": {
+    "type": "state_desynchronization",
+    "mechanism": "A pool's view function (e.g. get_virtual_price() or pool token rate) computes token pricing based on balances before internal state or LP token supply is burned. During a raw ETH/token transfer callback (e.g. remove_liquidity), the pool's nonReentrant lock only guards state-mutating functions, leaving view functions callable in an inconsistent state."
+  },
+  "preconditions": [
+    {
+      "id": "PREC-EXTERNAL-CALLBACK",
+      "description": "The AMM pool invokes an external transfer (e.g. raw ETH or ERC777/ERC1363) allowing attacker execution during liquidity withdrawal.",
+      "verification_method": "TAINT_ANALYSIS",
+      "required": true
+    },
+    {
+      "id": "PREC-VIEW-NOT-GUARDED",
+      "description": "The view function used by the external protocol (e.g. get_virtual_price) does not enforce a reentrancy lock.",
+      "verification_method": "STORAGE_SLOT",
+      "required": true
+    },
+    {
+      "id": "PREC-DEPENDENT-PROTOCOL",
+      "description": "An external protocol reads the pool view function synchronously to price collateral, calculate borrow power, or settle liquidations.",
+      "verification_method": "AST",
+      "required": true
+    }
+  ],
+  "danger_signals": {
+    "ast_nodes": [
+      "FunctionCall",
+      "MemberAccess"
+    ],
+    "function_calls": [
+      "get_virtual_price",
+      "remove_liquidity",
+      "remove_liquidity_one_coin",
+      "getRate"
+    ],
+    "storage_access": [
+      "_status",
+      "locked"
+    ],
+    "keywords": [
+      "get_virtual_price",
+      "remove_liquidity",
+      "nonReentrant",
+      "raw_call"
+    ]
+  },
+  "mitigations": [
+    {
+      "name": "View Reentrancy Guard",
+      "mechanism": "Enforce nonReentrantView or check that the pool is not locked (e.g. Balancer's getPoolTokens or Curve's lock checking) before returning prices.",
+      "code_example": "require(pool.locked() == false, \"Pool reentered\");"
+    }
+  ],
+  "associated_templates": [
+    "TMPL-REENTRANCY-RO-01"
+  ]
+}

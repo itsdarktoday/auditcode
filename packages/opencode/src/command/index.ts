@@ -26,6 +26,7 @@ import PROMPT_PAUSE from "./template/audit-pause.txt"
 import PROMPT_GOAL from "./template/audit-goal.txt"
 import PROMPT_DEBATE from "./template/audit-debate.txt"
 import PROMPT_TAINT from "./template/audit-taint.txt"
+import PROMPT_EIE from "./template/audit-eie.txt"
 import { LegacyEvent } from "@auditcode/schema/legacy-event"
 
 type State = {
@@ -80,6 +81,7 @@ export const Default = {
   GOAL: "goal",
   DEBATE: "debate",
   TAINT: "taint",
+  EIE: "eie",
 } as const
 
 export interface Interface {
@@ -236,6 +238,14 @@ const layer = Layer.effect(
         source: "command",
         template: PROMPT_TAINT,
         hints: hints(PROMPT_TAINT),
+      }
+
+      commands[Default.EIE] = {
+        name: Default.EIE,
+        description: "query Exploit Intelligence Engine memory and attack hypotheses [pattern|category|keyword]",
+        source: "command",
+        template: PROMPT_EIE,
+        hints: hints(PROMPT_EIE),
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {

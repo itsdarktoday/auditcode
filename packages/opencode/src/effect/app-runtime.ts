@@ -55,6 +55,7 @@ import { LayerNode } from "@auditcode/core/effect/layer-node"
 import { AppNodeBuilderV1 } from "./app-node-builder-v1"
 import { SessionProjector } from "@auditcode/core/session/projector"
 import { EngagementStore } from "@auditcode/core/engagement/store"
+import { EIEStore } from "@auditcode/core/eie/store"
 
 export const AppLayer = AppNodeBuilderV1.build(
   LayerNode.group([
@@ -107,6 +108,7 @@ export const AppLayer = AppNodeBuilderV1.build(
     ShareNext.node,
     SessionShare.node,
     EngagementStore.node,
+    EIEStore.node,
   ]),
 ).pipe(Layer.provideMerge(AppNodeBuilderV1.build(Ripgrep.node)), Layer.provideMerge(Observability.layer))
 

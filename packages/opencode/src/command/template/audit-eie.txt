@@ -1,0 +1,16 @@
+Query AuditCode's Exploit Intelligence Engine (EIE) structured security memory and hypothesis engine.
+
+Arguments: $ARGUMENTS
+
+Instructions:
+1. Parse the user's input in $ARGUMENTS:
+   - If a specific pattern ID is mentioned (e.g. `PAT-ACCOUNTING-001`, `PAT-REENTRANCY-RO-001`), call `eie_query` with `action: "get_pattern"`, `pattern_id: "<ID>"`.
+   - If an attack template ID is mentioned (e.g. `TMPL-ERC4626-INFLATION-01`), call `eie_query` with `action: "get_template"`, `template_id: "<ID>"`.
+   - If a counterexample ID is mentioned (e.g. `CE-INFLATION-VIRTUAL-SHARES`), call `eie_query` with `action: "get_counterexample"`, `counterexample_id: "<ID>"`.
+   - If a contract name or file is provided along with a suspected vulnerability, call `eie_query` with `action: "check_counterexamples"` or `action: "formulate_hypothesis"`.
+   - Otherwise, treat $ARGUMENTS as search keywords, primitives, or category, and call `eie_query` with `action: "query"`. If no arguments are provided, list all available patterns in the engine.
+2. Present the results clearly, highlighting:
+   - Matched vulnerability patterns & severity
+   - Preconditions that must be verified in the target code
+   - Known counterexamples (mitigating mechanisms that prove an attack will fail, eliminating false positives)
+   - Executable attack template steps if available

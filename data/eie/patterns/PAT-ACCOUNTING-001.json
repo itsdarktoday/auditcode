@@ -1,0 +1,74 @@
+{
+  "id": "PAT-ACCOUNTING-001",
+  "name": "ERC4626 Vault First-Depositor Share Inflation",
+  "category": "ACCOUNTING",
+  "sub_category": "vault_share_dilution",
+  "severity_default": "high",
+  "primitives_affected": [
+    "ERC4626",
+    "YieldVault",
+    "StakingPool",
+    "LendingPool"
+  ],
+  "root_cause": {
+    "type": "division_truncation_rounding",
+    "mechanism": "When vault totalSupply is 0 or low, an attacker deposits 1 wei of assets to receive 1 share, then donates a massive asset balance directly to the vault. Subsequent user deposits round down to 0 shares due to integer division (assets * totalSupply / totalAssets), forfeiting funds to the attacker."
+  },
+  "preconditions": [
+    {
+      "id": "PREC-EMPTY-VAULT",
+      "description": "Vault total supply is 0 or can be completely drained to 0.",
+      "verification_method": "AST",
+      "required": true
+    },
+    {
+      "id": "PREC-DIRECT-DONATION",
+      "description": "Vault accounting relies on balanceOf(address(this)) rather than an internal tracked balance, or allows direct donations.",
+      "verification_method": "STORAGE_SLOT",
+      "required": true
+    },
+    {
+      "id": "PREC-ROUND-DOWN",
+      "description": "Share calculation rounds down to 0 without reverting on 0 minted shares.",
+      "verification_method": "AST",
+      "required": true
+    }
+  ],
+  "danger_signals": {
+    "ast_nodes": [
+      "BinaryExpression",
+      "MemberAccess"
+    ],
+    "function_calls": [
+      "balanceOf",
+      "totalSupply",
+      "convertToShares",
+      "deposit"
+    ],
+    "storage_access": [
+      "totalSupply",
+      "totalAssets"
+    ],
+    "keywords": [
+      "convertToShares",
+      "totalAssets",
+      "balanceOf(address(this))",
+      "shares = assets * totalSupply / totalAssets"
+    ]
+  },
+  "mitigations": [
+    {
+      "name": "Virtual Shares & Offset",
+      "mechanism": "Implement OpenZeppelin ERC4626 _decimalsOffset() or initialize vault with virtual shares (e.g., 1000 shares dead-minted to address(0xdead)).",
+      "code_example": "function _decimalsOffset() internal view virtual returns (uint8) { return 3; }"
+    },
+    {
+      "name": "Zero Shares Mint Check",
+      "mechanism": "Revert transaction if minted shares is zero.",
+      "code_example": "require(shares > 0, \"Zero shares minted\");"
+    }
+  ],
+  "associated_templates": [
+    "TMPL-ERC4626-INFLATION-01"
+  ]
+}

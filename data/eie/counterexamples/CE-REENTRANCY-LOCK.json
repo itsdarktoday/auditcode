@@ -1,0 +1,14 @@
+{
+  "id": "CE-REENTRANCY-LOCK",
+  "pattern_id": "PAT-REENTRANCY-RO-001",
+  "title": "Reentrancy View Guard / Balancer ensureNotInVaultContext Protection",
+  "apparent_vulnerability": "Protocol queries external pool rate or get_virtual_price() during liquidity withdrawal.",
+  "mitigating_mechanism": "Oracle or lending pool explicitly checks whether the AMM pool is currently in an active lock / context via ensureNotInVaultContext() or pool.locked(), immediately reverting if reentered.",
+  "code_example": "function getValue(...) external view returns (uint256) {\n    vault.ensureNotInVaultContext();\n    return pool.getRate();\n}",
+  "why_attack_fails": "Any attempt by the attacker's fallback hook to query the oracle during liquidity withdrawal triggers ensureNotInVaultContext() and reverts the entire transaction.",
+  "rejection_signal": {
+    "ast_check": "ensureNotInVaultContext",
+    "storage_check": "_status",
+    "revert_signature": "REENTRANCY"
+  }
+}

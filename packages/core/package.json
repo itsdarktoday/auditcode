@@ -20,6 +20,8 @@
     "./effect/app-node": "./src/effect/app-node.ts",
     "./session/runner": "./src/session/runner/index.ts",
     "./system-context": "./src/system-context/index.ts",
+    "./eie/*": "./src/eie/*.ts",
+    "./eie": "./src/eie/index.ts",
     "./*": "./src/*.ts"
   },
   "imports": {
