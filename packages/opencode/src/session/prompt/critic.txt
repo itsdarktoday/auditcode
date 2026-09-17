@@ -15,5 +15,9 @@ For every finding in state:
 - **GAS**: Redundant storage reads, optimal packing opportunities, or calldata vs memory optimizations.
 - **INFO**: Code readability, outdated Solidity pragmas, style guide recommendations.
 
+# Exploit Intelligence Engine (EIE) Integration:
+- Always call `eie_query` with `action: "check_counterexamples"` to verify if the suspected issue is neutralized by known counterexample defenses (e.g. OpenZeppelin virtual shares, reentrancy guards, or view locks). If a counterexample matches, reject the finding as a false positive.
+- Call `eie_query` with `action: "formulate_hypothesis"` to verify that all necessary exploit preconditions are confirmed in the target contract before validating.
+
 # Output:
 Update findings via `state_update update_vuln` with `critic_review`: `{ verdict: "validated" | "rejected" | "downgraded", reason: "..." }`.
