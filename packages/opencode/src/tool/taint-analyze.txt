@@ -1,0 +1,1 @@
+Performs deep semantic call-graph and storage slot taint analysis on smart contracts, tracing user-controlled data flow (msg.sender, msg.value, parameters) through sanitizers (require, modifiers) to critical sinks (token/ETH transfers, state writes, delegatecall), and detecting Checks-Effects-Interactions (CEI) violations and Read-Only Reentrancy desynchronization hazards.

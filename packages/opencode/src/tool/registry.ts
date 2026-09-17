@@ -52,6 +52,7 @@ import { ErcValidateTool } from "./erc-validate"
 import { InvariantTestTool } from "./invariant-test"
 import { ForkSimulateTool } from "./fork-simulate"
 import { DebateRunTool } from "./debate-run"
+import { TaintAnalyzeTool } from "./taint-analyze"
 
 import { EngagementStore } from "@auditcode/core/engagement/store"
 import * as Truncate from "./truncate"
@@ -159,6 +160,7 @@ const layer = Layer.effect(
     const invarianttest = yield* InvariantTestTool
     const forksimulate = yield* ForkSimulateTool
     const debaterun = yield* DebateRunTool
+    const taintanalyze = yield* TaintAnalyzeTool
 
     const agent = yield* Agent.Service
 
@@ -291,6 +293,7 @@ const layer = Layer.effect(
           invarianttest: Tool.init(invarianttest),
           forksimulate: Tool.init(forksimulate),
           debaterun: Tool.init(debaterun),
+          taintanalyze: Tool.init(taintanalyze),
         })
 
         return {
@@ -335,6 +338,7 @@ const layer = Layer.effect(
             tool.invarianttest,
             tool.forksimulate,
             tool.debaterun,
+            tool.taintanalyze,
             ...(flags.experimentalPlanMode && flags.client === "cli" ? [tool.plan] : []),
           ],
           task: tool.task,

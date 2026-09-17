@@ -25,6 +25,7 @@ import PROMPT_OBJECTIVES from "./template/audit-objectives.txt"
 import PROMPT_PAUSE from "./template/audit-pause.txt"
 import PROMPT_GOAL from "./template/audit-goal.txt"
 import PROMPT_DEBATE from "./template/audit-debate.txt"
+import PROMPT_TAINT from "./template/audit-taint.txt"
 import { LegacyEvent } from "@auditcode/schema/legacy-event"
 
 type State = {
@@ -78,6 +79,7 @@ export const Default = {
   PAUSE: "pause",
   GOAL: "goal",
   DEBATE: "debate",
+  TAINT: "taint",
 } as const
 
 export interface Interface {
@@ -226,6 +228,14 @@ const layer = Layer.effect(
         source: "command",
         template: PROMPT_DEBATE,
         hints: hints(PROMPT_DEBATE),
+      }
+
+      commands[Default.TAINT] = {
+        name: Default.TAINT,
+        description: "semantic call-graph and storage slot taint analysis [contract|file]",
+        source: "command",
+        template: PROMPT_TAINT,
+        hints: hints(PROMPT_TAINT),
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {

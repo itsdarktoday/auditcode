@@ -1,0 +1,8 @@
+Perform deep semantic call-graph and storage slot taint analysis on the target contract:
+
+Target: $ARGUMENTS
+
+Workflow:
+1. Run `taint_analyze` on the specified contract or file to extract data flow from user-controlled sources (msg.sender, msg.value, parameters) through sanitizers (require, modifiers) to critical sinks (transfers, state writes, delegatecall).
+2. Inspect the generated call-graph for storage slot desynchronization, Checks-Effects-Interactions (CEI) violations, and Read-Only Reentrancy hazards.
+3. If security anomalies are detected, record candidate vulnerabilities in audit state via `state_update`.
